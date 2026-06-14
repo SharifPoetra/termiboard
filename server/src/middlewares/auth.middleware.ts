@@ -6,7 +6,7 @@ export const initAuthMiddleware = async (app: FastifyInstance): Promise<void> =>
     try {
       // app.jwt.verify will automatically look for the "Authorization: Bearer <TOKEN>" header
       await request.jwtVerify();
-    } catch (err) {
+    } catch {
       // If the token is missing, expired, or invalid, throw a 401 Unauthorized error
       return reply.status(401).send({
         status: 'fail',
