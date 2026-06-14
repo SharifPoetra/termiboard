@@ -51,7 +51,7 @@ export const createCardHandler = async (request: FastifyRequest, reply: FastifyR
       })
       .returning();
 
-    // BROADCAST EVENT: Notify everyone in the board that a card has created
+    // BROADCAST EVENT: Notify everyone in the board that a card is created
     io.to(boardId).emit('card_created', newCard[0]);
 
     return reply.status(201).send({
