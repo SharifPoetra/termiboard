@@ -303,6 +303,6 @@ Contributions are always welcome! Please follow these clear steps to help mainta
  * [**SharifPoetra**](https://github.com/SharifPoetra/) - *Core Architect & Backend Developer*
 
 ## 📄 License
-This software artifact is licensed under the terms of the formal **MIT License**. Check out the fully detailed copy inside the root repository [LICENSE](LICENSE) file for deep permissions mapping.
+This software artifact is licensed under the terms of the formal **MIT License**. Check out the fully detailed copy inside the root repository [LICENSE](../LICENSE) file for deep permissions mapping.
 
 ---
