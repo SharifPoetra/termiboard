@@ -174,7 +174,7 @@ export const deleteCardHandler = async (request: FastifyRequest, reply: FastifyR
       message: 'Card deleted successfully',
     });
   } catch (err: any) {
-    request.server.log.error(err, 'Card deletion failed');
+    request.server.log.error(err, 'Delete card failed');
     return reply.status(500).send({ status: 'error', message: 'Internal server error' });
   }
 };
