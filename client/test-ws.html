@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TermiBoard WebSocket Diagnostic</title>
+    <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
+    <style>
+      :root {
+        --bg-color: #1e1e24;
+        --panel-color: #2a2a35;
+        --text-color: #f5f5f7;
+        --accent-color: #54a0ff;
+      }
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 20px;
+      }
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      .panel {
+        background-color: var(--panel-color);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      }
+      h2 {
+        margin-top: 0;
+        color: var(--accent-color);
+      }
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+      }
+      input[type='text'] {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+        border: 1px solid #444;
+        background-color: #333;
+        color: #fff;
+        box-sizing: border-box;
+      }
+      button {
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      button:hover {
+        opacity: 0.9;
+      }
+      .status {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-weight: bold;
+        margin-left: 10px;
+      }
+      .disconnected {
+        background-color: #ee5a24;
+      }
+      .connected {
+        background-color: #10ac84;
+      }
+      #logConsole {
+        background-color: #111;
+        font-family: 'Courier New', Courier, monospace;
+        padding: 15px;
+        border-radius: 6px;
+        height: 350px;
+        overflow-y: auto;
+        border: 1px solid #333;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="panel">
+        <h2>⚡ TermiBoard Live Gateway Connection</h2>
+        <label for="boardId">Target Board UUID</label>
+        <input type="text" id="boardId" placeholder="Enter Board ID (eg: 7e2bb492-dac3-41c3-a178-63fffd17c7cd)" />
+
+        <button onclick="connectToGateway()">Connect & Join Room</button>
+        <span id="connectionStatus" class="status disconnected">OFFLINE</span>
+      </div>
+
+      <div class="panel">
+        <h2>📡 Live Broadcast Stream Log</h2>
+        <div id="logConsole">Waiting for gateway command connection initialization...</div>
+      </div>
+    </div>
+
+    <script>
+      let socket;
+      const logConsole = document.getElementById('logConsole');
+      const statusLabel = document.getElementById('connectionStatus');
+
+      function appendLog(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        logConsole.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+        logConsole.scrollTop = logConsole.scrollHeight;
+      }
+
+      function connectToGateway() {
+        const boardId = document.getElementById('boardId').value.trim();
+
+        if (!boardId) {
+          alert('Please fill in the Board UUID first!');
+          return;
+        }
+
+        // If the socket is already live, disconnect the old connection before creating a new one.
+        if (socket) {
+          socket.disconnect();
+        }
+
+        appendLog(`<span style="color: #54a0ff;">Attempting handshake connection to http://127.0.0.1:3001...</span>`);
+
+        // Initialize Socket.io Gateway connection to backend port 3001
+        socket = io('http://127.0.0.1:3001');
+
+        // EVENT: When Successfully Connected to Gateway Server
+        socket.on('connect', () => {
+          statusLabel.innerText = 'CONNECTED';
+          statusLabel.className = 'status connected';
+          appendLog(
+            `<span style="color: #10ac84; font-weight: bold;">[CONNECTED]</span> Gateway pipe established. Socket ID: ${socket.id}`,
+          );
+
+          // Take a room slot based on the channel Board ID
+          appendLog(`Emitting target room command: <span style="color: #ff9f43;">join_board</span> for ID: ${boardId}`);
+          socket.emit('join_board', boardId);
+        });
+
+        // EVENT: When Connection Is Lost
+        socket.on('disconnect', () => {
+          statusLabel.innerText = 'OFFLINE';
+          statusLabel.className = 'status disconnected';
+          appendLog(`<span style="color: #ee5a24; font-weight: bold;">[DISCONNECTED]</span> Stream session closed.`);
+        });
+
+        // ==========================================
+        // 🏛️ REAL-TIME COLUMNS BROADCAST LISTENERS
+        // ==========================================
+
+        // LISTENER: Column Created
+        socket.on('column_created', (data) => {
+          appendLog(`
+        <span style="color: #10ac84; font-weight: bold;">[EVENT: column_created]</span> 🏛️ New column track spawned!<br>
+        &nbsp;&nbsp;▪ <b>Column Name:</b> ${data.name}<br>
+        &nbsp;&nbsp;▪ <b>Column ID:</b> <span style="color: #ff9f43;">${data.id}</span>
+      `);
+        });
+
+        // LISTENER: Column Updated (Rename / Reposition)
+        socket.on('column_updated', (data) => {
+          appendLog(`
+        <span style="color: #54a0ff; font-weight: bold;">[EVENT: column_updated]</span> ✏️ Column properties altered!<br>
+        &nbsp;&nbsp;▪ <b>New Name:</b> ${data.name}<br>
+        &nbsp;&nbsp;▪ <b>Sorted Position:</b> ${data.position}
+      `);
+        });
+
+        // LISTENER: Column Deleted
+        socket.on('column_deleted', (data) => {
+          appendLog(`
+        <span style="color: #ee5a24; font-weight: bold;">[EVENT: column_deleted]</span> 🗑️ Column lane completely destroyed!<br>
+        &nbsp;&nbsp;▪ <b>Purged Column ID:</b> <span style="color: #ff1212;">${data.id}</span>
+      `);
+        });
+
+        // ==========================================
+        // 🃏 REAL-TIME CARDS BROADCAST LISTENERS
+        // ==========================================
+
+        // LISTENER: Card Created
+        socket.on('card_created', (data) => {
+          appendLog(`
+        <span style="color: #10ac84; font-weight: bold;">[EVENT: card_created]</span> 🃏 Task card added!<br>
+        &nbsp;&nbsp;▪ <b>Title:</b> ${data.title}<br>
+        &nbsp;&nbsp;▪ <b>Card ID:</b> <span style="color: #ff9f43;">${data.id}</span><br>
+        &nbsp;&nbsp;▪ <b>Belongs to Column:</b> ${data.columnId}
+      `);
+        });
+
+        // LISTENER: Card Moved (Drag and Drop)
+        socket.on('card_moved', (data) => {
+          appendLog(`
+        <span style="color: #ff9f43; font-weight: bold;">[EVENT: card_moved]</span> 🔀 Card layout sequence shifted!<br>
+        &nbsp;&nbsp;▪ <b>Card Title:</b> ${data.title}<br>
+        &nbsp;&nbsp;▪ <b>Target Column:</b> ${data.columnId}<br>
+        &nbsp;&nbsp;▪ <b>New Index Position:</b> ${data.position}
+      `);
+        });
+
+        // LISTENER: Card Updated (Textual Content Modified)
+        socket.on('card_updated', (data) => {
+          appendLog(`
+        <span style="color: #54a0ff; font-weight: bold;">[EVENT: card_updated]</span> ✏️ Card metadata content modified!<br>
+        &nbsp;&nbsp;▪ <b>Updated Title:</b> ${data.title}<br>
+        &nbsp;&nbsp;▪ <b>Description Body:</b> ${data.content}
+      `);
+        });
+
+        // LISTENER: Card Deleted
+        socket.on('card_deleted', (data) => {
+          appendLog(`
+        <span style="color: #ee5a24; font-weight: bold;">[EVENT: card_deleted]</span> 🗑️ Card vanished from board view!<br>
+        &nbsp;&nbsp;▪ <b>Purged Card ID:</b> <span style="color: #ff1212;">${data.id}</span>
+      `);
+        });
+      }
+    </script>
+  </body>
+</html>
