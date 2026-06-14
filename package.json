@@ -6,6 +6,7 @@
     "client",
     "server"
   ],
+  "type": "module",
   "scripts": {
     "dev:server": "npm run dev -w @termiboard/server",
     "build:server": "npm run build -w @termiboard/server",
