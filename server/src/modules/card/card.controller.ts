@@ -51,7 +51,7 @@ export const createCardHandler = async (request: FastifyRequest, reply: FastifyR
       })
       .returning();
 
-    // BROADCAST EVENT: Notify everyone in the board that a card is created
+    // BROADCAST EVENT: Notify that a card is created
     io.to(boardId).emit('card_created', newCard[0]);
 
     return reply.status(201).send({
@@ -129,7 +129,7 @@ export const updateCardHandler = async (request: FastifyRequest, reply: FastifyR
       .where(eq(cards.id, id))
       .returning();
 
-    // BROADCAST EVENT: Notify everyone in the board that a card has moved/changed
+    // BROADCAST EVENT: Notify that a card is moved/changed
     if (columnId || position) {
       io.to(boardId).emit('card_moved', updatedCards[0]);
     } else {
@@ -166,7 +166,7 @@ export const deleteCardHandler = async (request: FastifyRequest, reply: FastifyR
 
     await db.delete(cards).where(eq(cards.id, id));
 
-    // BROADCAST EVENT: Tell clients to remove this specific card ID from their UI
+    // BROADCAST EVENT: Notify that a card is deleted
     io.to(boardId).emit('card_deleted', { id });
 
     return reply.status(200).send({
