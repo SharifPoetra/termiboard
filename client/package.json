@@ -1,6 +1,6 @@
 {
   "name": "@termiboard/client",
-  "description": "",
+  "description": "A real-time collaborative Kanban board client",
   "version": "1.0.0",
   "private": true,
   "main": "index.js",

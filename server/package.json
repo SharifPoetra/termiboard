@@ -1,7 +1,7 @@
 {
   "name": "@termiboard/server",
   "version": "1.0.0",
-  "description": "A real-time collaborative Kanban board API built with Fastify, Drizzle ORM, PostgreSQL, and Socket.io.",
+  "description": "A real-time collaborative Kanban board API.",
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
