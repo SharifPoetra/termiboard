@@ -1,4 +1,4 @@
-# TermiBoard Backend
+# TermiBoard Backend API
 
 A real-time collaborative Kanban board API built with Fastify, Drizzle ORM, PostgreSQL, and Socket.io.
 
@@ -14,6 +14,7 @@ JWT_SECRET=your_jwt_secret
 All requests must set the header Content-Type: application/json. Protected endpoints require an Authorization: Bearer <JWT_TOKEN> header.
 
 ### 1. Authentication Module (/api/auth)
+
 #### 🔹 Register a New Account
  * **Endpoint**: POST /api/auth/register
  * **Auth Required**: No
@@ -24,7 +25,6 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "email": "sharif@example.com",
   "password": "securepassword123"
 }
-
 ```
  * **Success Response (201 Created)**:
 ```json
@@ -40,7 +40,6 @@ All requests must set the header Content-Type: application/json. Protected endpo
     }
   }
 }
-
 ```
 
 #### 🔹 Log In to Account
@@ -52,7 +51,6 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "email": "sharif@example.com",
   "password": "securepassword123"
 }
-
 ```
  * **Success Response (200 OK)**:
 ```json
@@ -63,7 +61,6 @@ All requests must set the header Content-Type: application/json. Protected endpo
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
 }
-
 ```
 
 ### 2. Boards Module (/api/boards)
@@ -76,7 +73,6 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "name": "School Website Project",
   "description": "Optionally add description to this board"
 }
-
 ```
  * **Success Response (201 Created)**:
 ```json
@@ -92,7 +88,6 @@ All requests must set the header Content-Type: application/json. Protected endpo
     }
   }
 }
-
 ```
 
 #### 🔹 Retrieve All User Boards
@@ -113,7 +108,6 @@ All requests must set the header Content-Type: application/json. Protected endpo
     ]
   }
 }
-
 ```
 
 #### 🔹 Invite Collaborator to a Board
@@ -125,7 +119,6 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
   "email": "budi@example.com"
 }
-
 ```
  * **Success Response (201 Created)**:
 ```json
@@ -142,7 +135,6 @@ All requests must set the header Content-Type: application/json. Protected endpo
     }
   }
 }
-
 ```
 
 ### 3. Columns Module (/api/columns)
@@ -153,11 +145,12 @@ All requests must set the header Content-Type: application/json. Protected endpo
 ```json
 {
   "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
-  "title": "To Do",
+  "name": "To Do",
   "position": "1"
 }
-
 ```
+ * **Triggered Side Effect**: Broadcasts a WebSocket event column_created to all connected clients inside the matching board room.
+
 #### 🔹 Fetch Columns Within a Board
  * **Endpoint**: GET /api/columns/:boardId
  * **Auth Required**: Yes
@@ -170,15 +163,38 @@ All requests must set the header Content-Type: application/json. Protected endpo
       {
         "id": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
         "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
-        "title": "To Do",
+        "name": "To Do",
         "position": "1",
         "createdAt": "2026-06-13T08:20:00.000Z"
       }
     ]
   }
 }
-
 ```
+
+#### 🔹 Update Column Name or Position
+ * **Endpoint**: PATCH /api/columns/:id
+ * **Auth Required**: Yes
+ * **Request Body (Partial Update)**:
+```json
+{
+  "name": "In Progress",
+  "position": "2"
+}
+```
+ * **Triggered Side Effect**: Broadcasts a WebSocket event column_updated to the room namespace.
+
+#### 🔹 Delete a Column
+ * **Endpoint**: DELETE /api/columns/:id
+ * **Auth Required**: Yes
+ * **Success Response (200 OK)**:
+```json
+{
+  "status": "success",
+  "message": "Column deleted successfully"
+}
+```
+ * **Triggered Side Effect**: Broadcasts a WebSocket event column_deleted to notify clients to wipe the lane layout from their UI.
 
 ### 4. Cards Module (/api/cards)
 #### 🔹 Create a New Task Card
@@ -192,9 +208,8 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "content": "Integrate real-time capabilities via socket.io gateway.",
   "position": "1"
 }
-
 ```
- * **Triggered Side Effect**: Broadcasts a WebSocket event `card_created` to all clients actively viewing the parent board.
+ * **Triggered Side Effect**: Broadcasts a WebSocket event card_created to all clients actively viewing the parent board.
 
 #### 🔹 Fetch Cards Within a Column
  * **Endpoint**: GET /api/cards/:columnId
@@ -216,7 +231,6 @@ All requests must set the header Content-Type: application/json. Protected endpo
     ]
   }
 }
-
 ```
 
 #### 🔹 Update / Move a Task Card
@@ -229,51 +243,59 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "position": "2"
 }
 ```
-* **Triggered Side Effect**: Broadcasts `card_moved` if `columnId` or `position` is modified. Otherwise, broadcasts `card_updated`.
+ * **Triggered Side Effect**: Broadcasts card_moved if columnId or position is modified. Otherwise, broadcasts card_updated.
+
+#### 🔹 Delete a Task Card
+ * **Endpoint**: DELETE /api/cards/:id
+ * **Auth Required**: Yes
+ * **Success Response (200 OK)**:
+```json
+{
+  "status": "success",
+  "message": "Card deleted successfully"
+}
+```
+
+ * **Triggered Side Effect**: Broadcasts card_deleted carrying the deleted card ID payload.
 
 ## ⚡ Socket.io WebSocket Gateway
-The real-time ecosystem utilizes specific custom rooms to multiplex state changes across collaborated users securely. WebSocket Server runs seamlessly bound to the primary HTTP transport port (3001).
+The real-time ecosystem utilizes specific custom board rooms to multiplex state changes across collaborated users securely. The WebSocket Server runs seamlessly bound to the primary HTTP transport port (3001).
 
 ### Client-to-Server Actions (Inbound Events)
+
 #### 📡 join_board
 Connects an authorized socket client stream into a highly isolated space mapping a specific board entity. This prevents cross-board broadcast leaks.
  * **Payload Data Type**: string (The target UUID of the Board)
  * **Usage Example**:
 ```javascript
 socket.emit('join_board', '7e2bb492-dac3-41c3-a178-63fffd17c7cd');
-
 ```
 
 ### Server-to-Client Broadcasts (Outbound Events)
-#### 🔔 card_created
-Fires automatically whenever any team member creates a card through the REST HTTP endpoint under an authenticated space.
- * **Broadcast Range**: Distributed strictly to clients grouped inside the matching Board Room.
- * **Payload Schema**:
-```json
-{
-  "id": "cc987654-32ba-cdba-feea-1234567890ab",
-  "columnId": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
-  "title": "Setup WebSocket Implementation",
-  "content": "Integrate real-time capabilities via socket.io gateway.",
-  "position": "1",
-  "createdAt": "2026-06-13T08:58:05.000Z"
-}
-```
 
-#### 🔄 card_moved
-Fires automatically when a card's layout layout changes (shifted inside a column or dragged to another column).
- * **Payload Schema**: Card object containing new columnId or position.
-#### ✏️ card_updated
-Fires when a card's textual metadata changes (like updating title or content) without changing its structural sequence.
- * **Payload Schema**: Card object containing modified textual fields.
+#### 🏛️ Columns State Sync
+ * **column_created**: Fires automatically whenever any team member spawns a new list column.
+   * *Payload*: Full Column object (id, boardId, name, position, createdAt).
+ * **column_updated**: Fires when a column is renamed or re-ordered layout-wise.
+   * *Payload*: Updated Column object.
+ * **column_deleted**: Fires when a column is dropped from the dashboard view.
+   * *Payload*: { id: "column-uuid" }
 
----
+#### 🃏 Cards State Sync
+ * **card_created**: Fires automatically whenever any team member creates a card under an authenticated space.
+   * *Payload*: Full Card object.
+ * **card_moved**: Fires when a card's layout properties change (shifted sequence indexes or dropped to another track lane).
+   * *Payload*: Card object containing modified structural sorting metadata.
+ * **card_updated**: Fires when a card's textual metadata shifts (such as modifying title or description content) while resting on the same spatial indexes.
+   * *Payload*: Card object containing modified textual fields.
+ * **card_deleted**: Fires when a card is dropped from the kanban layout workspace.
+   * *Payload*: { id: "card-uuid" }
 
 ## 👥 Contribution Guidelines
 Contributions are always welcome! Please follow these clear steps to help maintain project sanity:
  1. Fork the upstream repository branch.
  2. Spin up a separate feature isolation patch locally: git checkout -b feat/your-awesome-feature.
- 3. Commit clean code changes with strict, descriptive messaging patterns.
+ 3. Commit clean code changes with strict, descriptive messaging patterns (*Semantic Commits*).
  4. Push your branch upstream: git push origin feat/your-awesome-feature.
  5. Open a formal Pull Request targeting the primary main production branch.
 
