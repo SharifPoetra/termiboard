@@ -11,12 +11,12 @@ JWT_SECRET=your_jwt_secret
 ```
 
 ## 📡 REST API Reference
-All requests must set the header Content-Type: application/json. Protected endpoints require an Authorization: Bearer <JWT_TOKEN> header.
+All requests must set the header `Content-Type: application/json`. Protected endpoints require an `Authorization: Bearer <JWT_TOKEN>` header.
 
 ### 1. Authentication Module (/api/auth)
 
 #### 🔹 Register a New Account
- * **Endpoint**: POST /api/auth/register
+ * **Endpoint**: `POST /api/auth/register`
  * **Auth Required**: No
  * **Request Body**:
 ```json
@@ -43,7 +43,7 @@ All requests must set the header Content-Type: application/json. Protected endpo
 ```
 
 #### 🔹 Log In to Account
- * **Endpoint**: POST /api/auth/login
+ * **Endpoint**: `POST /api/auth/login`
  * **Auth Required**: No
  * **Request Body**:
 ```json
@@ -58,8 +58,8 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "status": "success",
   "message": "Login successful",
   "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-    "user" {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
       "id": "e4a8b792-51c3-4c4c-811a-7b3b4d4567ef",
       "username": "sharif",
       "email": "sharif@example.com",
@@ -71,7 +71,7 @@ All requests must set the header Content-Type: application/json. Protected endpo
 
 ### 2. Boards Module (/api/boards)
 #### 🔹 Create a New Project Board
- * **Endpoint**: POST /api/boards
+ * **Endpoint**: `POST /api/boards`
  * **Auth Required**: Yes
  * **Request Body**:
 ```json
@@ -97,7 +97,7 @@ All requests must set the header Content-Type: application/json. Protected endpo
 ```
 
 #### 🔹 Retrieve All User Boards
- * **Endpoint**: GET /api/boards
+ * **Endpoint**: `GET /api/boards`
  * **Auth Required**: Yes
  * **Success Response (200 OK)**:
 ```json
@@ -116,8 +116,65 @@ All requests must set the header Content-Type: application/json. Protected endpo
 }
 ```
 
+#### 🔹 Retrieve a Single Board Detail By ID
+ * **Endpoint**: `GET /api/boards/:id`
+ * **Auth Required**: Yes
+ * **Success Response (200 OK)**:
+```json
+{
+  "status": "success",
+  "data": {
+    "board": {
+      "id": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
+      "name": "School Website Project",
+      "description": "Optionally add description to this board",
+      "createdAt": "2026-06-13T08:15:00.000Z"
+    }
+  }
+}
+```
+
+#### 🔹 Update Board Name or Description
+ * **Endpoint**: `PATCH /api/boards/:id`
+ * **Auth Required**: Yes
+ * **Request Body (Partial Update)**:
+```json
+{
+  "name": "Updated School Website Project",
+  "description": "Updated description text"
+}
+```
+ * **Success Response (200 OK)**:
+```json
+{
+  "status": "success",
+  "message": "Board updated successfully",
+  "data": {
+    "board": {
+      "id": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
+      "name": "Updated School Website Project",
+      "description": "Updated description text",
+      "createdAt": "2026-06-13T08:15:00.000Z"
+    }
+  }
+}
+```
+ * **Triggered Side Effect**: Broadcasts a WebSocket event `board_updated` to the room namespace matching the board ID.
+
+#### 🔹 Delete a Board
+ * **Endpoint**: `DELETE /api/boards/:id`
+ * **Auth Required**: Yes
+ * **Success Response (200 OK)**:
+```json
+{
+  "status": "success",
+  "message": "Board deleted successfully"
+}
+```
+ * **Triggered Side Effect**: Broadcasts a WebSocket event `board_deleted` to notify and force redirect all active clients viewing this channel.
+
 #### 🔹 Invite Collaborator to a Board
- * **Endpoint**: POST /api/boards/invite
+ * **Endpoint**: `POST /api/boards/invite`
  * **Auth Required**: Yes
  * **Request Body**:
 ```json
@@ -145,7 +202,7 @@ All requests must set the header Content-Type: application/json. Protected endpo
 
 ### 3. Columns Module (/api/columns)
 #### 🔹 Create a New Column
- * **Endpoint**: POST /api/columns
+ * **Endpoint**: `POST /api/columns`
  * **Auth Required**: Yes
  * **Request Body**:
 ```json
@@ -155,10 +212,10 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "position": "1"
 }
 ```
- * **Triggered Side Effect**: Broadcasts a WebSocket event column_created to all connected clients inside the matching board room.
+ * **Triggered Side Effect**: Broadcasts a WebSocket event `column_created` to all connected clients inside the matching board room.
 
 #### 🔹 Fetch Columns Within a Board
- * **Endpoint**: GET /api/columns/:boardId
+ * **Endpoint**: `GET /api/columns/:boardId`
  * **Auth Required**: Yes
  * **Success Response (200 OK)**:
 ```json
@@ -179,7 +236,7 @@ All requests must set the header Content-Type: application/json. Protected endpo
 ```
 
 #### 🔹 Update Column Name or Position
- * **Endpoint**: PATCH /api/columns/:id
+ * **Endpoint**: `PATCH /api/columns/:id`
  * **Auth Required**: Yes
  * **Request Body (Partial Update)**:
 ```json
@@ -188,10 +245,10 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "position": "2"
 }
 ```
- * **Triggered Side Effect**: Broadcasts a WebSocket event column_updated to the room namespace.
+ * **Triggered Side Effect**: Broadcasts a WebSocket event `column_updated` to the room namespace.
 
 #### 🔹 Delete a Column
- * **Endpoint**: DELETE /api/columns/:id
+ * **Endpoint**: `DELETE /api/columns/:id`
  * **Auth Required**: Yes
  * **Success Response (200 OK)**:
 ```json
@@ -200,11 +257,11 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "message": "Column deleted successfully"
 }
 ```
- * **Triggered Side Effect**: Broadcasts a WebSocket event column_deleted to notify clients to wipe the lane layout from their UI.
+ * **Triggered Side Effect**: Broadcasts a WebSocket event `column_deleted` to notify clients to wipe the lane layout from their UI.
 
 ### 4. Cards Module (/api/cards)
 #### 🔹 Create a New Task Card
- * **Endpoint**: POST /api/cards
+ * **Endpoint**: `POST /api/cards`
  * **Auth Required**: Yes
  * **Request Body**:
 ```json
@@ -215,10 +272,10 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "position": "1"
 }
 ```
- * **Triggered Side Effect**: Broadcasts a WebSocket event card_created to all clients actively viewing the parent board.
+ * **Triggered Side Effect**: Broadcasts a WebSocket event `card_created` to all clients actively viewing the parent board.
 
 #### 🔹 Fetch Cards Within a Column
- * **Endpoint**: GET /api/cards/:columnId
+ * **Endpoint**: `GET /api/cards/:columnId`
  * **Auth Required**: Yes
  * **Success Response (200 OK)**:
 ```json
@@ -240,7 +297,7 @@ All requests must set the header Content-Type: application/json. Protected endpo
 ```
 
 #### 🔹 Update / Move a Task Card
- * **Endpoint**: PATCH /api/cards/:id
+ * **Endpoint**: `PATCH /api/cards/:id`
  * **Auth Required**: Yes
  * **Request Body (Partial Update)**:
 ```json
@@ -249,10 +306,10 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "position": "2"
 }
 ```
- * **Triggered Side Effect**: Broadcasts card_moved if columnId or position is modified. Otherwise, broadcasts card_updated.
+ * **Triggered Side Effect**: Broadcasts `card_moved` if `columnId` or `position` is modified. Otherwise, broadcasts `card_updated`.
 
 #### 🔹 Delete a Task Card
- * **Endpoint**: DELETE /api/cards/:id
+ * **Endpoint**: `DELETE /api/cards/:id`
  * **Auth Required**: Yes
  * **Success Response (200 OK)**:
 ```json
@@ -261,8 +318,7 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "message": "Card deleted successfully"
 }
 ```
-
- * **Triggered Side Effect**: Broadcasts card_deleted carrying the deleted card ID payload.
+ * **Triggered Side Effect**: Broadcasts `card_deleted` carrying the deleted card ID payload.
 
 ## ⚡ Socket.io WebSocket Gateway
 The real-time ecosystem utilizes specific custom board rooms to multiplex state changes across collaborated users securely. The WebSocket Server runs seamlessly bound to the primary HTTP transport port (3001).
@@ -278,6 +334,12 @@ socket.emit('join_board', '7e2bb492-dac3-41c3-a178-63fffd17c7cd');
 ```
 
 ### Server-to-Client Broadcasts (Outbound Events)
+
+#### 📋 Boards State Sync
+ * **board_updated**: Fires when the parent board information (name or description) is updated by the owner.
+   * *Payload*: Updated Board object.
+ * **board_deleted**: Fires when the board is completely deleted by the owner.
+   * *Payload*: { id: "board-uuid" }
 
 #### 🏛️ Columns State Sync
  * **column_created**: Fires automatically whenever any team member spawns a new list column.
