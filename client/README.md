@@ -26,4 +26,45 @@ The target UI will eventually be engineered with modern reactive frameworks, aim
 2. **Interactive Board Layout:** Drag-and-drop support for switching card positions across columns effortlessly.
 3. **Collaborative Presence:** Visual indicators showing other active members currently viewing the board room.
 
+### 📂 Planned structures
+```
+client/src/
+├── assets/             # Global static assets (images, favicon, global CSS)
+├── components/         # Global & Reusable UI Components (Atomic Design)
+│   ├── ui/             # Small/base components (Button.tsx, Input.tsx, Badge.tsx)
+│   ├── layout/         # Layout components (Navbar.tsx, Sidebar.tsx, Footer.tsx)
+│   └── shared/         # Shared composite components (Modal.tsx, LoadingSpinner.tsx)
+│
+├── features/           # Heart of the app (Feature-Based)
+│   ├── auth/           # 🔐 Authentication Feature
+│   │   ├── components/ # FormLogin.tsx, FormRegister.tsx
+│   │   ├── pages/      # LoginPage.tsx, RegisterPage.tsx
+│   │   └── types/      # auth.types.ts
+│   │
+│   ├── dashboard/      # 📊 Main Feature / Project Boards List
+│   │   ├── components/ # BoardCard.tsx, CreateBoardModal.tsx
+│   │   ├── pages/      # DashboardPage.tsx
+│   │   └── types/      # dashboard.types.ts
+│   │
+│   └── kanban/         # 📋 Core Kanban Board Feature (Workspace)
+│       ├── components/ # BoardHeader.tsx, ColumnContainer.tsx, CardItem.tsx
+│       ├── pages/      # BoardDetailPage.tsx
+│       ├── hooks/      # useKanbanSocket.ts (specifically handles WS for this board)
+│       └── types/      # kanban.types.ts
+│
+├── hooks/              # Global Custom Hooks
+│   ├── useSocket.ts    # Initialization & main gateway for Socket.io-client
+│   └── useAuth.ts      # Quick bridge to check login status in router
+│
+├── lib/                # Third-party Configuration
+│   └── axios.ts        # Global Axios instance (+ interceptor to inject JWT Token)
+│
+├── store/              # Centralized State Management (Zustand)
+│   ├── authStore.ts    # Manages logged-in user data & token
+│   └── boardStore.ts   # Manages realtime Board, Column, & Card data
+│
+├── App.tsx             # Router setup (Login Gatekeeper & Private Route)
+└── main.tsx            # React application entry point
+```
+
 ---
