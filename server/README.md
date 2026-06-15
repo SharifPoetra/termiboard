@@ -59,6 +59,12 @@ All requests must set the header Content-Type: application/json. Protected endpo
   "message": "Login successful",
   "data": {
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    "user" {
+      "id": "e4a8b792-51c3-4c4c-811a-7b3b4d4567ef",
+      "username": "sharif",
+      "email": "sharif@example.com",
+      "createdAt": "2026-06-13T08:00:00.000Z"
+    }
   }
 }
 ```
