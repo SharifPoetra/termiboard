@@ -9,8 +9,9 @@
   "type": "module",
   "scripts": {
     "dev:server": "npm run dev -w @termiboard/server",
+    "dev:client": "npm run dev -w @termiboard/client",
     "build:server": "npm run build -w @termiboard/server",
-    "build:client": "echo 'Frontend build placeholder'"
+    "build:client": "npm run build -w @termiboard/client"
   },
   "repository": {
     "type": "git",
