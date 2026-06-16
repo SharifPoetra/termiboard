@@ -3,6 +3,7 @@ import { useAuthStore } from './store/authStore';
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { RegisterPage } from './features/auth/pages/RegisterPage';
 import { DashboardPage } from './features/dashboard/pages/DashboardPage';
+import { BoardDetailPage } from './features/kanban/pages/BoardDetailPage';
 import { ShieldCheck, LogOut, LayoutDashboard } from 'lucide-react';
 import { Button } from './components/ui/Button';
 
@@ -32,17 +33,7 @@ export default function App() {
   if (isAuthenticated) {
     // IF THE USER CLICKS A SPECIFIC BOARD (TUNNELING WORKSPACE)
     if (activeBoardId) {
-      return (
-        <div className="min-h-screen bg-slate-950 text-emerald-400 font-mono p-8 flex flex-col items-center justify-center gap-4">
-          <p className="text-xs tracking-widest">[ TUNNELING TO BOARD: {activeBoardId} ]</p>
-          <button
-            onClick={() => setActiveBoardId(null)}
-            className="border border-emerald-500 text-emerald-400 text-xs px-4 py-2 rounded font-mono uppercase bg-transparent cursor-pointer hover:bg-emerald-500/10 transition-all"
-          >
-            &lt; Return To Grid
-          </button>
-        </div>
-      );
+      return <BoardDetailPage boardId={activeBoardId} onBackToDashboard={() => setActiveBoardId(null)} />;
     }
 
     // IF THE USER HAS CLICKED "GO TO BOARDS AREA"
