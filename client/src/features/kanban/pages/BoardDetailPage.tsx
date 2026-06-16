@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useBoardStore } from '../../../store/boardStore';
 import { useSocket } from '../../../hooks/useSocket';
 import { ColumnContainer } from '../components/ColumnContainer';
+import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { ArrowLeft, Plus, Terminal, LayoutGrid } from 'lucide-react';
 
 interface BoardDetailPageProps {
@@ -26,6 +27,9 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
   const [newColumnName, setNewColumnName] = useState('');
   const [isAddingColumn, setIsAddingColumn] = useState(false);
 
+  // Structural control states for modals
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
   useEffect(() => {
     fetchColumns(boardId);
   }, [boardId, fetchColumns]);
@@ -39,7 +43,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
 
     socket.on('board_deleted', () => {
       console.log('[WS_STREAM] Parent board was purged. Evacuating...');
-      alert('This board has been deleted by the owner.');
+      sessionStorage.setItem('TERMINAL_EVAC_SIGNAL', 'true');
       onBackToDashboard();
     });
 
@@ -97,25 +101,22 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
       socket.off('card_moved');
       socket.off('card_deleted');
     };
-  }, [
-    socket,
-    syncAddColumn,
-    syncUpdateColumn,
-    syncDeleteColumn,
-    syncAddCard,
-    syncUpdateCard,
-    syncDeleteCard,
-    onBackToDashboard,
-  ]);
+  }, [socket, syncAddColumn, syncUpdateColumn, syncDeleteColumn, syncAddCard, syncUpdateCard, syncDeleteCard]); // Removed onBackToDashboard from dependency loop since closure is handled by modal callback now
 
-  const handleDeleteBoard = async () => {
-    if (window.confirm('CRITICAL WARPING: Wipe entire board along with all data blocks permanently?')) {
-      try {
-        await deleteBoard(boardId);
-        onBackToDashboard();
-      } catch (err) {
-        console.error('Board elimination aborted', err);
-      }
+  // Swapped browser prompt with local component state trigger
+  const handleDeleteBoardClick = () => {
+    setIsConfirmOpen(true);
+  };
+
+  // Executes the real pipeline erasure sequence once verified inside the custom alert window
+  const handleExecuteDeleteBoard = async () => {
+    try {
+      await deleteBoard(boardId);
+      onBackToDashboard();
+    } catch (err) {
+      console.error('Board elimination aborted', err);
+    } finally {
+      setIsConfirmOpen(false);
     }
   };
 
@@ -154,7 +155,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
 
         <div className="flex items-center gap-3">
           <button
-            onClick={handleDeleteBoard}
+            onClick={handleDeleteBoardClick}
             className="text-[10px] uppercase font-bold text-red-500 hover:text-red-400 bg-slate-950 border border-red-950 px-2 py-1 rounded cursor-pointer transition-colors"
           >
             Nuke Board
@@ -220,6 +221,15 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
           )}
         </div>
       </main>
+
+      {/* TERMINAL PURGE MODAL DIALOG */}
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        title="CRITICAL WARPING: Wipe Board Stream Data"
+        message="Execute terminal purge operation on the entire active board? This structural command will shred all nested status lanes, task matrices, and card blocks permanently."
+        onConfirm={handleExecuteDeleteBoard}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
     </div>
   );
 };

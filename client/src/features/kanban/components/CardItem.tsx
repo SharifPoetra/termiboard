@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Card } from '../types/kanban.types';
 import { useBoardStore } from '../../../store/boardStore';
-import { ConfirmModal } from '../../../components/ui/ConfirmModal'; // Imported the custom terminal modal
+import { ConfirmModal } from '../../../components/ui/ConfirmModal';
+import { EditCardModal } from '../../../components/ui/EditCardModal';
 import { Calendar, Hash, Edit2, X } from 'lucide-react';
 
 interface CardItemProps {
@@ -11,13 +12,23 @@ interface CardItemProps {
 export const CardItem: React.FC<CardItemProps> = ({ card }) => {
   const { updateCard, deleteCard } = useBoardStore();
 
-  // State to control custom confirmation modal visibility
+  // Dialog structural control states
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
-  const handleEditTitle = () => {
-    const newTitle = window.prompt('Modify Task Parameter Title:', card.title);
-    if (newTitle && newTitle.trim() !== card.title) {
-      updateCard(card.id, { title: newTitle.trim() });
+  // Opens the edit dialog frame
+  const handleEditCardClick = () => {
+    setIsEditOpen(true);
+  };
+
+  // Triggers the store action to update both structural properties at once
+  const handleSaveCardData = async (newTitle: string, newContent: string) => {
+    try {
+      await updateCard(card.id, { title: newTitle, content: newContent });
+    } catch (err) {
+      console.error('Failed to update card parameters matrix', err);
+    } finally {
+      setIsEditOpen(false);
     }
   };
 
@@ -57,21 +68,21 @@ export const CardItem: React.FC<CardItemProps> = ({ card }) => {
           <Hash size={10} className="shrink-0" /> {card.id ? card.id.substring(0, 6) : 'matrix'}
         </span>
         <span className="flex items-center gap-1 shrink-0">
-          <Calendar size={10} /> {card.createdAt ? new Date(card.createdAt).toLocaleDateString() : '16/6/2026'}
+          <Calendar size={10} /> {new Date(card.createdAt).toLocaleDateString()}
         </span>
       </div>
 
       {/* ACTION TOOLBAR: edit and delete card */}
       <div className="absolute top-2.5 right-2.5 flex items-center gap-1 z-10 bg-slate-950/90 pl-1 py-0.5 rounded backdrop-blur-xs">
         <button
-          onClick={handleEditTitle}
+          onClick={handleEditCardClick}
           className="text-slate-500 hover:text-emerald-400 p-1 rounded bg-slate-900 border border-slate-800 cursor-pointer shadow-sm transition-colors"
           title="Patch Card Parameters"
         >
           <Edit2 size={10} />
         </button>
         <button
-          onClick={handleDeleteCardClick} // Hooked into our local structural state modal trigger
+          onClick={handleDeleteCardClick}
           className="text-slate-400 hover:text-red-400 p-1 rounded bg-slate-900 border border-slate-800 cursor-pointer shadow-sm transition-colors"
           title="Purge Card"
         >
@@ -79,7 +90,16 @@ export const CardItem: React.FC<CardItemProps> = ({ card }) => {
         </button>
       </div>
 
-      {/* TERMINAL PURGE MODAL DIALOG */}
+      {/* TERMINAL MODIFIER DIALOG: For editing Title & Content */}
+      <EditCardModal
+        isOpen={isEditOpen}
+        initialTitle={card.title}
+        initialContent={card.content || ''}
+        onSave={handleSaveCardData}
+        onCancel={() => setIsEditOpen(false)}
+      />
+
+      {/* TERMINAL PURGE MODAL DIALOG: For confirmation deletions */}
       <ConfirmModal
         isOpen={isConfirmOpen}
         title="Purge Card Matrix Object"

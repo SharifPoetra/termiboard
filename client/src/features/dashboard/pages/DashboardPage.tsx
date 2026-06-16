@@ -4,7 +4,8 @@ import { useAuthStore } from '../../../store/authStore';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
-import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare, Trash2 } from 'lucide-react'; // Added Trash2 import
+import { AlertModal } from '../../../components/ui/AlertModal';
+import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare, Trash2 } from 'lucide-react';
 
 interface DashboardPageProps {
   onSelectBoard: (boardId: string) => void;
@@ -12,14 +13,19 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) => {
   const { user, logout } = useAuthStore();
-  const { boards, fetchBoards, createBoard, deleteBoard, isLoading, error } = useBoardStore(); // Added deleteBoard from store
+  const { boards, fetchBoards, createBoard, deleteBoard, isLoading, error } = useBoardStore();
 
   const [newBoardName, setNewBoardName] = useState('');
   const [newBoardDesc, setNewBoardDesc] = useState('');
   const [formError, setFormError] = useState('');
+  const [isEvacuated, setIsEvacuated] = useState(false);
 
   useEffect(() => {
     fetchBoards();
+    if (sessionStorage.getItem('TERMINAL_EVAC_SIGNAL') === 'true') {
+      setIsEvacuated(true);
+      sessionStorage.removeItem('TERMINAL_EVAC_SIGNAL');
+    }
   }, [fetchBoards]);
 
   const handleCreateBoard = async (e: React.SyntheticEvent) => {
@@ -182,6 +188,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           setModalOpen(false);
           setSelectedBoardData(null);
         }}
+      />
+
+      <AlertModal
+        isOpen={isEvacuated}
+        title="Active Board Stream Terminated"
+        message="This secure board matrix environment has been broadcast-shredded by the root administrator. Immediate evacuation to core dashboard is required."
+        onClose={() => setIsEvacuated(false)}
       />
     </div>
   );
