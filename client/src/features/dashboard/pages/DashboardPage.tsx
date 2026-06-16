@@ -3,6 +3,7 @@ import { useBoardStore } from '../../../store/boardStore';
 import { useAuthStore } from '../../../store/authStore';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
+import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare, Trash2 } from 'lucide-react'; // Added Trash2 import
 
 interface DashboardPageProps {
@@ -39,18 +40,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
     }
   };
 
-  const handleDeleteBoard = async (e: React.MouseEvent, boardId: string, boardName: string) => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedBoardData, setSelectedBoardData] = useState<{ id: string; name: string } | null>(null);
+
+  const handleOpenConfirm = (e: React.MouseEvent, boardId: string, boardName: string) => {
     e.stopPropagation(); // CRITICAL: Prevents triggering onSelectBoard when clicking the trash icon
-    if (
-      window.confirm(
-        `Execute terminal purge on board stream: "${boardName}"?\nThis will destroy all nested columns and cards.`,
-      )
-    ) {
-      try {
-        await deleteBoard(boardId);
-      } catch (err) {
-        console.error('Board destruction sequence aborted', err);
-      }
+    setSelectedBoardData({ id: boardId, name: boardName });
+    setModalOpen(true);
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!selectedBoardData) return;
+    try {
+      await deleteBoard(selectedBoardData.id);
+    } catch (err) {
+      console.error('Board destruction sequence aborted', err);
+    } finally {
+      setModalOpen(false);
+      setSelectedBoardData(null);
     }
   };
 
@@ -152,7 +159,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
                     <div className="flex items-center gap-3 shrink-0">
                       <span>{new Date(board.createdAt).toLocaleDateString()}</span>
                       <button
-                        onClick={(e) => handleDeleteBoard(e, board.id, board.name)}
+                        onClick={(e) => handleOpenConfirm(e, board.id, board.name)}
                         className="text-slate-500 hover:text-red-400 p-1 rounded hover:bg-slate-950 border border-transparent hover:border-slate-800/60 cursor-pointer transition-all duration-150"
                         title="Purge Active Board Stream"
                       >
@@ -166,6 +173,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           )}
         </section>
       </main>
+      <ConfirmModal
+        isOpen={modalOpen}
+        title="Wipe Board Stream Meta"
+        message={`Execute terminal purge on board stream: "${selectedBoardData?.name}"? This will destroy all nested columns and cards database grids permanently.`}
+        onConfirm={handleExecuteDelete}
+        onCancel={() => {
+          setModalOpen(false);
+          setSelectedBoardData(null);
+        }}
+      />
     </div>
   );
 };

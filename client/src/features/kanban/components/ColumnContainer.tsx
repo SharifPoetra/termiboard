@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Column, Card } from '../types/kanban.types';
 import { useBoardStore } from '../../../store/boardStore';
 import { CardItem } from './CardItem';
+import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { Plus, PlusCircle, Trash2 } from 'lucide-react';
 
 interface ColumnContainerProps {
@@ -21,6 +22,9 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
   // States for dynamic inline title updates
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [columnName, setColumnName] = useState(column.name);
+
+  // State for Custom Confirmation Modal
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   // Sync state if column name is mutated from external WS stream
   useEffect(() => {
@@ -72,13 +76,19 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
     }
   };
 
-  const handleDeleteColumn = async () => {
-    if (window.confirm(`Execute terminal purge on lane: "${column.name}"?`)) {
-      try {
-        await deleteColumn(column.id);
-      } catch (err) {
-        console.error('Purge execution failed', err);
-      }
+  // Triggers the visual modal state instead of native blocking prompt
+  const handleDeleteColumnClick = () => {
+    setIsConfirmOpen(true);
+  };
+
+  // Handles the actual API execution once user acknowledges inside the custom modal
+  const handleExecuteDeleteColumn = async () => {
+    try {
+      await deleteColumn(column.id);
+    } catch (err) {
+      console.error('Purge execution failed', err);
+    } finally {
+      setIsConfirmOpen(false);
     }
   };
 
@@ -113,7 +123,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
         </div>
 
         <button
-          onClick={handleDeleteColumn}
+          onClick={handleDeleteColumnClick}
           className="text-slate-500 hover:text-red-400 p-1 bg-transparent border-none cursor-pointer transition-colors shrink-0"
           title="Purge Column Lane"
         >
@@ -188,6 +198,15 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
           </button>
         </div>
       )}
+
+      {/* TERMINAL PURGE MODAL DIALOG */}
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        title="Wipe Column Lane Data Stream"
+        message={`Execute terminal purge on lane sequence: "${column.name}"? This action will destroy all containing task card parameters inside this grid.`}
+        onConfirm={handleExecuteDeleteColumn}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
     </div>
   );
 };

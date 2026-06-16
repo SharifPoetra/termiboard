@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '../types/kanban.types';
 import { useBoardStore } from '../../../store/boardStore';
+import { ConfirmModal } from '../../../components/ui/ConfirmModal'; // Imported the custom terminal modal
 import { Calendar, Hash, Edit2, X } from 'lucide-react';
 
 interface CardItemProps {
@@ -10,6 +11,9 @@ interface CardItemProps {
 export const CardItem: React.FC<CardItemProps> = ({ card }) => {
   const { updateCard, deleteCard } = useBoardStore();
 
+  // State to control custom confirmation modal visibility
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
   const handleEditTitle = () => {
     const newTitle = window.prompt('Modify Task Parameter Title:', card.title);
     if (newTitle && newTitle.trim() !== card.title) {
@@ -17,13 +21,19 @@ export const CardItem: React.FC<CardItemProps> = ({ card }) => {
     }
   };
 
-  const handleDeleteCard = () => {
-    if (window.confirm('Purge selected card matrix object?')) {
-      try {
-        deleteCard(card.id);
-      } catch (err) {
-        console.error('Card deletion failed', err);
-      }
+  // Triggers custom visual alert instead of a blocking native popup
+  const handleDeleteCardClick = () => {
+    setIsConfirmOpen(true);
+  };
+
+  // Executes the real API action sequence after matrix validation
+  const handleExecuteDeleteCard = async () => {
+    try {
+      await deleteCard(card.id);
+    } catch (err) {
+      console.error('Card deletion failed', err);
+    } finally {
+      setIsConfirmOpen(false);
     }
   };
 
@@ -61,13 +71,22 @@ export const CardItem: React.FC<CardItemProps> = ({ card }) => {
           <Edit2 size={10} />
         </button>
         <button
-          onClick={handleDeleteCard}
+          onClick={handleDeleteCardClick} // Hooked into our local structural state modal trigger
           className="text-slate-400 hover:text-red-400 p-1 rounded bg-slate-900 border border-slate-800 cursor-pointer shadow-sm transition-colors"
           title="Purge Card"
         >
           <X size={11} />
         </button>
       </div>
+
+      {/* TERMINAL PURGE MODAL DIALOG */}
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        title="Purge Card Matrix Object"
+        message={`Execute structural dump sequence on card parameter: "${card.title}"? This specific data node will be shredded permanently.`}
+        onConfirm={handleExecuteDeleteCard}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
     </div>
   );
 };
