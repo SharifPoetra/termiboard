@@ -3,7 +3,7 @@ import { useBoardStore } from '../../../store/boardStore';
 import { useAuthStore } from '../../../store/authStore';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
-import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare } from 'lucide-react';
+import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare, Trash2 } from 'lucide-react'; // Added Trash2 import
 
 interface DashboardPageProps {
   onSelectBoard: (boardId: string) => void;
@@ -11,7 +11,7 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) => {
   const { user, logout } = useAuthStore();
-  const { boards, fetchBoards, createBoard, isLoading, error } = useBoardStore();
+  const { boards, fetchBoards, createBoard, deleteBoard, isLoading, error } = useBoardStore(); // Added deleteBoard from store
 
   const [newBoardName, setNewBoardName] = useState('');
   const [newBoardDesc, setNewBoardDesc] = useState('');
@@ -21,7 +21,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
     fetchBoards();
   }, [fetchBoards]);
 
-  const handleCreateBoard = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateBoard = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setFormError('');
 
@@ -36,6 +36,21 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
       setNewBoardDesc('');
     } catch (err) {
       // Global errors are handled by the store
+    }
+  };
+
+  const handleDeleteBoard = async (e: React.MouseEvent, boardId: string, boardName: string) => {
+    e.stopPropagation(); // CRITICAL: Prevents triggering onSelectBoard when clicking the trash icon
+    if (
+      window.confirm(
+        `Execute terminal purge on board stream: "${boardName}"?\nThis will destroy all nested columns and cards.`,
+      )
+    ) {
+      try {
+        await deleteBoard(boardId);
+      } catch (err) {
+        console.error('Board destruction sequence aborted', err);
+      }
     }
   };
 
@@ -130,9 +145,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
                       {board.description || 'No system logging data description attached.'}
                     </p>
                   </div>
-                  <div className="border-t border-slate-950/60 pt-2.5 mt-auto flex items-center justify-between text-[10px] text-slate-600 font-mono gap-2">
-                    <span className="truncate">ID: {board.id.substring(0, 8)}...</span>
-                    <span className="shrink-0">{new Date(board.createdAt).toLocaleDateString()}</span>
+                  <div className="border-t border-slate-950/60 pt-2.5 mt-auto flex items-center justify-between text-[10px] text-slate-600 font-mono gap-2 min-w-0">
+                    <span className="truncate flex-1">ID: {board.id.substring(0, 8)}...</span>
+
+                    {/* ACTION ZONE: Contains timestamp and block-isolated trash purge event */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span>{new Date(board.createdAt).toLocaleDateString()}</span>
+                      <button
+                        onClick={(e) => handleDeleteBoard(e, board.id, board.name)}
+                        className="text-slate-500 hover:text-red-400 p-1 rounded hover:bg-slate-950 border border-transparent hover:border-slate-800/60 cursor-pointer transition-all duration-150"
+                        title="Purge Active Board Stream"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
