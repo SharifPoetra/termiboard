@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Column, Card } from '../types/kanban.types'; // Added Card import type explicitly
+import { Column, Card } from '../types/kanban.types';
 import { useBoardStore } from '../../../store/boardStore';
 import { CardItem } from './CardItem';
-import { Plus, PlusCircle, Trash2, X } from 'lucide-react';
+import { Plus, PlusCircle, Trash2 } from 'lucide-react';
 
 interface ColumnContainerProps {
   column: Column;
@@ -11,11 +11,21 @@ interface ColumnContainerProps {
 export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
   if (!column) return null;
 
-  const { cards, fetchCards, createCard, deleteColumn, deleteCard } = useBoardStore();
+  const { cards, fetchCards, createCard, updateColumn, deleteColumn } = useBoardStore();
+
   const [isAdding, setIsAdding] = useState(false);
   const [cardTitle, setCardTitle] = useState('');
   const [cardContent, setCardContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // States for dynamic inline title updates
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [columnName, setColumnName] = useState(column.name);
+
+  // Sync state if column name is mutated from external WS stream
+  useEffect(() => {
+    setColumnName(column.name);
+  }, [column.name]);
 
   useEffect(() => {
     if (column.id) {
@@ -24,6 +34,20 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
   }, [column.id, fetchCards]);
 
   const columnCards = cards[column.id] || [];
+
+  const handleUpdateColumnName = async () => {
+    if (!columnName.trim() || columnName === column.name) {
+      setIsEditingTitle(false);
+      return;
+    }
+    try {
+      await updateColumn(column.id, { name: columnName });
+    } catch (err) {
+      console.error('Failed to patch column meta name', err);
+    } finally {
+      setIsEditingTitle(false);
+    }
+  };
 
   const handleAddCard = async (e: React.SyntheticEvent) => {
     e.preventDefault();
@@ -58,23 +82,31 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
     }
   };
 
-  const handleDeleteCard = async (cardId: string) => {
-    if (window.confirm('Purge selected card matrix object?')) {
-      try {
-        await deleteCard(cardId);
-      } catch (err) {
-        console.error('Card deletion failed', err);
-      }
-    }
-  };
-
   return (
     <div className="bg-slate-900 border border-slate-800 rounded flex flex-col max-h-[75vh] w-72 sm:w-80 shrink-0 shadow-md font-mono">
       {/* COLUMN HEADER CONTROLS */}
       <div className="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-900/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2">
           <span className="text-emerald-500 font-bold text-xs shrink-0">&gt;</span>
-          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-300 truncate">{column.name}</h3>
+          {isEditingTitle ? (
+            <input
+              type="text"
+              value={columnName}
+              onChange={(e) => setColumnName(e.target.value)}
+              onBlur={handleUpdateColumnName}
+              onKeyDown={(e) => e.key === 'Enter' && handleUpdateColumnName()}
+              className="bg-slate-950 border border-emerald-500 rounded px-1.5 py-0.5 text-xs font-bold text-slate-100 uppercase focus:outline-none w-full"
+              autoFocus
+            />
+          ) : (
+            <h3
+              onClick={() => setIsEditingTitle(true)}
+              className="text-xs font-bold uppercase tracking-widest text-slate-300 truncate cursor-pointer hover:text-emerald-400 flex items-center gap-1 min-w-0"
+              title="Click to rename lane sequence"
+            >
+              <span className="truncate">{column.name}</span>
+            </h3>
+          )}
           <span className="text-[10px] text-slate-500 bg-slate-950 px-1.5 py-0.2 rounded border border-slate-800 shrink-0">
             {columnCards.length}
           </span>
@@ -92,15 +124,9 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
       {/* TASK CARDS STREAM LIST */}
       <div className="flex-1 p-3 overflow-y-auto space-y-2 custom-scrollbar bg-slate-900/30">
         {columnCards.map((card: Card) => (
-          <div key={card.id} className="relative group/card">
+          <div key={card.id} className="relative">
+            {/* Kept extremely clean, structural elements moved inside CardItem */}
             <CardItem card={card} />
-            <button
-              onClick={() => handleDeleteCard(card.id)}
-              className="absolute top-2.5 right-2.5 text-slate-500 hover:text-red-400 p-1 rounded bg-slate-950 border border-slate-800/80 cursor-pointer transition-all duration-150 shadow-sm"
-              title="Purge Card"
-            >
-              <X size={10} />
-            </button>
           </div>
         ))}
 

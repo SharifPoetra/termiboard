@@ -16,22 +16,30 @@ interface BoardActions {
   fetchBoards: () => Promise<void>;
   createBoard: (boardData: { name: string; description: string }) => Promise<void>;
   setCurrentBoard: (board: Board | null) => void;
+  deleteBoard: (boardId: string) => Promise<void>;
   clearError: () => void;
 
   // Columns Actions
   fetchColumns: (boardId: string) => Promise<void>;
   createColumn: (columnData: { boardId: string; name: string; position: string }) => Promise<void>;
+  updateColumn: (columnId: string, columnData: { name?: string; position?: string }) => Promise<void>;
   deleteColumn: (columnId: string) => Promise<void>;
 
   // Cards Actions
   fetchCards: (columnId: string) => Promise<void>;
   createCard: (cardData: { columnId: string; title: string; content: string; position: string }) => Promise<void>;
+  updateCard: (
+    cardId: string,
+    cardData: { title?: string; content?: string; position?: string; columnId?: string },
+  ) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
 
   // Real-time WS Sync Mutators
   syncAddColumn: (column: Column) => void;
+  syncUpdateColumn: (column: Column) => void;
   syncDeleteColumn: (columnId: string) => void;
   syncAddCard: (card: Card) => void;
+  syncUpdateCard: (card: Card) => void;
   syncDeleteCard: (card: Card) => void;
 }
 
@@ -54,6 +62,20 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
       set({ boards: response.data.data.boards, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false, error: err.response?.data?.message || 'Failed to fetch boards' });
+    }
+  },
+
+  // DELETE /api/boards/:id
+  deleteBoard: async (boardId) => {
+    try {
+      await axiosInstance.delete(`/boards/${boardId}`);
+      set((state) => ({
+        boards: state.boards.filter((b) => b.id !== boardId),
+        currentBoard: state.currentBoard?.id === boardId ? null : state.currentBoard,
+      }));
+    } catch (err: any) {
+      set({ error: err.response?.data?.message || 'Failed to terminate board' });
+      throw err;
     }
   },
 
@@ -94,6 +116,16 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
     }
   },
 
+  // PATCH /api/columns/:id
+  updateColumn: async (columnId, columnData) => {
+    try {
+      await axiosInstance.patch(`/columns/${columnId}`, columnData);
+    } catch (err: any) {
+      set({ error: err.response?.data?.message || 'Failed to adjust column parameters' });
+      throw err;
+    }
+  },
+
   // DELETE /api/columns/:id
   deleteColumn: async (columnId) => {
     try {
@@ -127,6 +159,16 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
     }
   },
 
+  // PATCH /api/cards/:id
+  updateCard: async (cardId, cardData) => {
+    try {
+      await axiosInstance.patch(`/cards/${cardId}`, cardData);
+    } catch (err: any) {
+      set({ error: err.response?.data?.message || 'Failed to modify card matrix' });
+      throw err;
+    }
+  },
+
   // DELETE /api/cards/:id
   deleteCard: async (cardId) => {
     try {
@@ -147,6 +189,14 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
     });
   },
 
+  syncUpdateColumn: (updatedColumn) => {
+    set((state) => ({
+      columns: state.columns
+        .map((c) => (c.id === updatedColumn.id ? updatedColumn : c))
+        .sort((a, b) => Number(a.position) - Number(b.position)),
+    }));
+  },
+
   syncDeleteColumn: (columnId) => {
     set((state) => ({
       columns: state.columns.filter((c) => c.id !== columnId),
@@ -161,6 +211,21 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
         cards: {
           ...state.cards,
           [card.columnId]: [...columnCards, card].sort((a, b) => Number(a.position) - Number(b.position)),
+        },
+      };
+    });
+  },
+
+  syncUpdateCard: (updatedCard) => {
+    set((state) => {
+      const colId = updatedCard.columnId;
+      const currentTrack = state.cards[colId] || [];
+      return {
+        cards: {
+          ...state.cards,
+          [colId]: currentTrack
+            .map((c) => (c.id === updatedCard.id ? updatedCard : c))
+            .sort((a, b) => Number(a.position) - Number(b.position)),
         },
       };
     });

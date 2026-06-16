@@ -10,8 +10,18 @@ interface BoardDetailPageProps {
 }
 
 export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBackToDashboard }) => {
-  const { columns, fetchColumns, createColumn, syncAddColumn, syncDeleteColumn, syncAddCard, syncDeleteCard } =
-    useBoardStore();
+  const {
+    columns,
+    deleteBoard,
+    fetchColumns,
+    createColumn,
+    syncAddColumn,
+    syncUpdateColumn,
+    syncDeleteColumn,
+    syncAddCard,
+    syncUpdateCard,
+    syncDeleteCard,
+  } = useBoardStore();
 
   const [newColumnName, setNewColumnName] = useState('');
   const [isAddingColumn, setIsAddingColumn] = useState(false);
@@ -27,9 +37,21 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
   useEffect(() => {
     if (!socket) return;
 
+    socket.on('board_deleted', () => {
+      console.log('[WS_STREAM] Parent board was purged. Evacuating...');
+      alert('This board has been deleted by the owner.');
+      onBackToDashboard();
+    });
+
     socket.on('column_created', (payload) => {
       console.log('[WS_STREAM] Incoming frame payload: column_created');
       syncAddColumn(payload);
+    });
+
+    socket.on('column_updated', (payload) => {
+      console.log('[WS_STREAM] Incoming frame payload: column_updated');
+      const colData = payload?.column || payload;
+      syncUpdateColumn(colData);
     });
 
     socket.on('column_deleted', (payload) => {
@@ -45,6 +67,18 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
       syncAddCard(payload);
     });
 
+    socket.on('card_updated', (payload) => {
+      console.log('[WS_STREAM] Incoming frame payload: card_updated');
+      const cardData = payload?.card || payload;
+      syncUpdateCard(cardData);
+    });
+
+    socket.on('card_moved', (payload) => {
+      console.log('[WS_STREAM] Incoming frame payload: card_moved');
+      const cardData = payload?.card || payload;
+      syncUpdateCard(cardData); // Reuse update mutator for re-positioning
+    });
+
     socket.on('card_deleted', (payload) => {
       console.log('[WS_STREAM] Incoming frame payload: card_deleted');
       const deletedCard = payload?.card || payload;
@@ -54,12 +88,36 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     });
 
     return () => {
+      socket.off('board_deleted');
       socket.off('column_created');
+      socket.off('column_updated');
       socket.off('column_deleted');
       socket.off('card_created');
+      socket.off('card_updated');
+      socket.off('card_moved');
       socket.off('card_deleted');
     };
-  }, [socket, syncAddColumn, syncDeleteColumn, syncAddCard, syncDeleteCard]);
+  }, [
+    socket,
+    syncAddColumn,
+    syncUpdateColumn,
+    syncDeleteColumn,
+    syncAddCard,
+    syncUpdateCard,
+    syncDeleteCard,
+    onBackToDashboard,
+  ]);
+
+  const handleDeleteBoard = async () => {
+    if (window.confirm('CRITICAL WARPING: Wipe entire board along with all data blocks permanently?')) {
+      try {
+        await deleteBoard(boardId);
+        onBackToDashboard();
+      } catch (err) {
+        console.error('Board elimination aborted', err);
+      }
+    }
+  };
 
   const handleCreateColumn = async (e: React.SyntheticEvent) => {
     e.preventDefault();
@@ -94,9 +152,18 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
           </div>
         </div>
 
-        <div className="text-[10px] text-emerald-400 bg-slate-950 border border-emerald-500/20 px-2 py-0.5 rounded flex items-center gap-1.5 shadow-sm shrink-0">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-          <span>TUNNEL_LIVE</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleDeleteBoard}
+            className="text-[10px] uppercase font-bold text-red-500 hover:text-red-400 bg-slate-950 border border-red-950 px-2 py-1 rounded cursor-pointer transition-colors"
+          >
+            Nuke Board
+          </button>
+
+          <div className="text-[10px] text-emerald-400 bg-slate-950 border border-emerald-500/20 px-2 py-0.5 rounded flex items-center gap-1.5 shadow-sm shrink-0">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+            <span>TUNNEL_LIVE</span>
+          </div>
         </div>
       </header>
 
