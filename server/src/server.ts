@@ -45,7 +45,11 @@ const options = {
 
 // Register core infrastructure plugins
 await app.register(fastifyEnv, options);
-await app.register(cors, { origin: true });
+await app.register(cors, {
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+});
 
 await app.register(fastifyJwt, {
   secret: app.config.JWT_SECRET,
