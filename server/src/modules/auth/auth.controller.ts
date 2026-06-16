@@ -12,7 +12,8 @@ interface RegisterBody {
 
 // Define the structure for Login Request Body
 interface LoginBody {
-  username: string; // This can accept either username or email
+  username: string;
+  email: string;
   password: string;
 }
 
@@ -71,7 +72,7 @@ export const registerHandler = async (request: FastifyRequest<{ Body: RegisterBo
 };
 
 export const loginHandler = async (request: FastifyRequest<{ Body: LoginBody }>, reply: FastifyReply) => {
-  const { username, password } = request.body;
+  const { username, email, password } = request.body;
   const { db } = request.server;
 
   try {
@@ -79,7 +80,7 @@ export const loginHandler = async (request: FastifyRequest<{ Body: LoginBody }>,
     const userResult = await db
       .select()
       .from(users)
-      .where(or(eq(users.username, username), eq(users.email, username)));
+      .where(or(eq(users.username, username), eq(users.email, email)));
 
     if (userResult.length === 0) {
       return reply.status(401).send({
