@@ -25,7 +25,7 @@ export const initDatabase = async (app: FastifyInstance): Promise<void> => {
     app.decorate('db', db);
     app.log.info('🚀 Drizzle ORM attached successfully to app.db');
   } catch (err: any) {
-    app.log.error('❌ Database initialization failed:', err);
+    app.log.error(err, '❌ Database initialization failed');
     process.exit(1);
   }
 };
