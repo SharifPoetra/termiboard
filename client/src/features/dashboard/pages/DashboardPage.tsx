@@ -28,6 +28,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
     }
   }, [fetchBoards]);
 
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const handleFocusInput = () => {
+    inputRef.current?.focus();
+    inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   const handleCreateBoard = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setFormError('');
@@ -105,6 +111,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
 
           <form onSubmit={handleCreateBoard} className="space-y-1">
             <Input
+              ref={inputRef}
               label="Board Name"
               placeholder="e.g., Microservices Setup"
               value={newBoardName}
@@ -135,10 +142,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           </div>
 
           {boards.length === 0 ? (
-            <div className="border border-dashed border-slate-800 rounded-lg p-8 md:p-12 text-center bg-slate-900/40">
-              <TerminalSquare className="mx-auto text-slate-700 mb-3" size={32} />
-              <p className="text-[11px] text-slate-500 tracking-wide uppercase px-2">
-                &gt; NO ACTIVE CHANNELS FOUND. INJECT PARAMETERS FROM THE LEFT SIDEBAR.
+            <div
+              onClick={handleFocusInput}
+              className="border border-dashed border-slate-800 hover:border-emerald-500/30 rounded-lg p-8 md:p-12 text-center bg-slate-900/40 cursor-pointer group transition-colors"
+            >
+              <TerminalSquare
+                className="mx-auto text-slate-700 group-hover:text-emerald-500 transition-colors mb-3"
+                size={32}
+              />
+              <p className="text-[11px] text-slate-500 group-hover:text-slate-300 tracking-wide uppercase px-2 font-mono transition-colors">
+                &gt; NO ACTIVE CHANNELS FOUND. <br></br>
+                <span className="text-emerald-400 underline">[ INITIALIZE NEW STREAM NOW ]</span>
               </p>
             </div>
           ) : (
