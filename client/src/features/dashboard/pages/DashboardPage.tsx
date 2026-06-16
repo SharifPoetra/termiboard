@@ -1,0 +1,145 @@
+import React, { useEffect, useState } from 'react';
+import { useBoardStore } from '../../../store/boardStore';
+import { useAuthStore } from '../../../store/authStore';
+import { Input } from '../../../components/ui/Input';
+import { Button } from '../../../components/ui/Button';
+import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare } from 'lucide-react';
+
+interface DashboardPageProps {
+  onSelectBoard: (boardId: string) => void;
+}
+
+export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) => {
+  const { user, logout } = useAuthStore();
+  const { boards, fetchBoards, createBoard, isLoading, error } = useBoardStore();
+
+  const [newBoardName, setNewBoardName] = useState('');
+  const [newBoardDesc, setNewBoardDesc] = useState('');
+  const [formError, setFormError] = useState('');
+
+  useEffect(() => {
+    fetchBoards();
+  }, [fetchBoards]);
+
+  const handleCreateBoard = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setFormError('');
+
+    if (!newBoardName.trim()) {
+      setFormError('Board identity name cannot be empty');
+      return;
+    }
+
+    try {
+      await createBoard({ name: newBoardName, description: newBoardDesc });
+      setNewBoardName('');
+      setNewBoardDesc('');
+    } catch (err) {
+      // Global errors are handled by the store
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-mono flex flex-col selection:bg-emerald-500/30">
+      {/* TOP CONTROL NAVIGATION NAVBAR - Ultra Dynamic Flex */}
+      <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-6 py-3 flex flex-row items-center justify-between shadow-md gap-4">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+          <Terminal className="text-emerald-400 animate-pulse shrink-0" size={18} />
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs md:text-sm font-bold tracking-widest text-slate-200 shrink-0">
+              TERMIBOARD_GRID //
+            </span>
+            <span className="text-[10px] md:text-xs text-slate-500 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 truncate max-w-[120px] sm:max-w-xs md:max-w-none">
+              SECURE_NODE: {user?.username}
+            </span>
+          </div>
+        </div>
+
+        <button
+          onClick={logout}
+          className="text-[11px] md:text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 flex items-center gap-1.5 bg-transparent border-none cursor-pointer transition-colors shrink-0"
+        >
+          <LogOut size={13} /> <span className="hidden xs:inline">[ KILL_SESSION ]</span>
+          <span className="xs:hidden">[ KILL ]</span>
+        </button>
+      </header>
+
+      {/* MAIN LAYOUT WRAPPER - Highly Dynamic Responsive Grid */}
+      <main className="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+        {/* LEFT COLUMN: CREATION CORE INJECTOR */}
+        <section className="bg-slate-900 border border-slate-800 rounded p-4 md:p-5 h-fit shadow-lg sm:col-span-1">
+          <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
+            <FolderPlus className="text-emerald-400 shrink-0" size={16} />
+            <h2 className="text-[11px] md:text-xs font-bold uppercase tracking-widest text-slate-300">
+              SPAWN_NEW_BOARD
+            </h2>
+          </div>
+
+          <form onSubmit={handleCreateBoard} className="space-y-1">
+            <Input
+              label="Board Name"
+              placeholder="e.g., Microservices Setup"
+              value={newBoardName}
+              onChange={(e) => setNewBoardName(e.target.value)}
+              error={formError || (error ? 'Deployment failed' : undefined)}
+              disabled={isLoading}
+            />
+            <Input
+              label="Description (Optional)"
+              placeholder="System parameters log..."
+              value={newBoardDesc}
+              onChange={(e) => setNewBoardDesc(e.target.value)}
+              disabled={isLoading}
+            />
+            <Button type="submit" isLoading={isLoading} className="mt-2 w-full text-xs py-2.5">
+              Inject Board Stream
+            </Button>
+          </form>
+        </section>
+
+        {/* RIGHT COLUMN: BOARDS ACTIVE GRID LIST */}
+        <section className="sm:col-span-2 lg:col-span-3 flex flex-col gap-4">
+          <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+            <Layout className="text-emerald-400 shrink-0" size={16} />
+            <h2 className="text-[11px] md:text-xs font-bold uppercase tracking-widest text-slate-300">
+              ACTIVE_PROJECT_STREAMS ({boards.length})
+            </h2>
+          </div>
+
+          {boards.length === 0 ? (
+            <div className="border border-dashed border-slate-800 rounded-lg p-8 md:p-12 text-center bg-slate-900/40">
+              <TerminalSquare className="mx-auto text-slate-700 mb-3" size={32} />
+              <p className="text-[11px] text-slate-500 tracking-wide uppercase px-2">
+                &gt; NO ACTIVE CHANNELS FOUND. INJECT PARAMETERS FROM THE LEFT SIDEBAR.
+              </p>
+            </div>
+          ) : (
+            /* Inside Grid Card: Handles single column layout on mobile, dual columns onward */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {boards.map((board) => (
+                <div
+                  key={board.id}
+                  onClick={() => onSelectBoard(board.id)}
+                  className="bg-slate-900 border border-slate-800 hover:border-emerald-500/40 rounded p-4 flex flex-col justify-between shadow transition-all duration-200 cursor-pointer group hover:shadow-emerald-950/5 break-words min-w-0"
+                >
+                  <div className="min-w-0">
+                    <h3 className="text-xs md:text-sm font-bold text-slate-200 group-hover:text-emerald-400 font-mono tracking-wide mb-1.5 transition-colors truncate">
+                      / {board.name}
+                    </h3>
+                    <p className="text-[11px] md:text-xs text-slate-500 line-clamp-2 mb-4 leading-relaxed">
+                      {board.description || 'No system logging data description attached.'}
+                    </p>
+                  </div>
+                  <div className="border-t border-slate-950/60 pt-2.5 mt-auto flex items-center justify-between text-[10px] text-slate-600 font-mono gap-2">
+                    <span className="truncate">ID: {board.id.substring(0, 8)}...</span>
+                    <span className="shrink-0">{new Date(board.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
+  );
+};

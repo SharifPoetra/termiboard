@@ -2,12 +2,17 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from './store/authStore';
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { RegisterPage } from './features/auth/pages/RegisterPage';
+import { DashboardPage } from './features/dashboard/pages/DashboardPage';
 import { ShieldCheck, LogOut, LayoutDashboard } from 'lucide-react';
 import { Button } from './components/ui/Button';
 
 export default function App() {
   const { isAuthenticated, user, isLoading, initializeAuth, logout } = useAuthStore();
   const [view, setView] = useState<'login' | 'register'>('login');
+
+  // State to track whether the user is opening the Dashboard Grid or viewing a specific Board
+  const [showDashboard, setShowDashboard] = useState<boolean>(false);
+  const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
 
   // Check the token when the web is first opened
   useEffect(() => {
@@ -23,8 +28,29 @@ export default function App() {
     );
   }
 
-  // IF LOGGED IN, DISPLAY THE MAIN DASHBOARD PLACEHOLDER
+  // IF LOGGED IN, DISPLAY THE MAIN DASHBOARD & SESSION CONTROLS
   if (isAuthenticated) {
+    // IF THE USER CLICKS A SPECIFIC BOARD (TUNNELING WORKSPACE)
+    if (activeBoardId) {
+      return (
+        <div className="min-h-screen bg-slate-950 text-emerald-400 font-mono p-8 flex flex-col items-center justify-center gap-4">
+          <p className="text-xs tracking-widest">[ TUNNELING TO BOARD: {activeBoardId} ]</p>
+          <button
+            onClick={() => setActiveBoardId(null)}
+            className="border border-emerald-500 text-emerald-400 text-xs px-4 py-2 rounded font-mono uppercase bg-transparent cursor-pointer hover:bg-emerald-500/10 transition-all"
+          >
+            &lt; Return To Grid
+          </button>
+        </div>
+      );
+    }
+
+    // IF THE USER HAS CLICKED "GO TO BOARDS AREA"
+    if (showDashboard) {
+      return <DashboardPage onSelectBoard={(boardId) => setActiveBoardId(boardId)} />;
+    }
+
+    // DEFAULT VIEW MATCHING YOUR INITIAL FILE (SESSION CARD)
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 font-mono p-8 flex flex-col items-center justify-center">
         <div className="bg-slate-900 border border-emerald-500/30 rounded-lg p-6 max-w-md w-full shadow-2xl">
@@ -49,7 +75,11 @@ export default function App() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <Button variant="primary" className="flex items-center justify-center gap-2">
+            <Button
+              variant="primary"
+              onClick={() => setShowDashboard(true)}
+              className="flex items-center justify-center gap-2"
+            >
               <LayoutDashboard size={14} /> Go To Boards Area
             </Button>
             <Button variant="danger" onClick={logout} className="flex items-center justify-center gap-2">
