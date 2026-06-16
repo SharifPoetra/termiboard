@@ -129,11 +129,12 @@ export const deleteColumnHandler = async (request: FastifyRequest, reply: Fastif
     await db.delete(columns).where(eq(columns.id, id));
 
     // BROADCAST EVENT: Notify that a column is deleted
-    io.to(boardId).emit('column_deleted', { id });
+    io.to(boardId).emit('column_deleted', currentColumn[0]);
 
     return reply.status(200).send({
       status: 'success',
       message: 'Column deleted successfully',
+      data: { column: currentColumn[0] },
     });
   } catch (err: any) {
     request.server.log.error(err, 'Delete column failed');

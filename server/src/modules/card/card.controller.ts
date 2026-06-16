@@ -154,7 +154,7 @@ export const deleteCardHandler = async (request: FastifyRequest, reply: FastifyR
 
   try {
     const targetCard = await db
-      .select({ boardId: columns.boardId })
+      .select()
       .from(cards)
       .innerJoin(columns, eq(cards.columnId, columns.id))
       .where(eq(cards.id, id));
@@ -162,16 +162,17 @@ export const deleteCardHandler = async (request: FastifyRequest, reply: FastifyR
     if (targetCard.length === 0) {
       return reply.status(404).send({ status: 'fail', message: 'Card not found' });
     }
-    const boardId = targetCard[0].boardId;
+    const boardId = targetCard[0].columns.boardId;
 
     await db.delete(cards).where(eq(cards.id, id));
 
     // BROADCAST EVENT: Notify that a card is deleted
-    io.to(boardId).emit('card_deleted', { id });
+    io.to(boardId).emit('card_deleted', targetCard[0].cards);
 
     return reply.status(200).send({
       status: 'success',
       message: 'Card deleted successfully',
+      data: { card: targetCard[0].cards },
     });
   } catch (err: any) {
     request.server.log.error(err, 'Delete card failed');

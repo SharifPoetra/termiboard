@@ -255,6 +255,15 @@ All requests must set the header `Content-Type: application/json`. Protected end
 {
   "status": "success",
   "message": "Column deleted successfully"
+  "data": {
+    "column": {
+      "id": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
+      "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
+      "name": "To Do",
+      "position": "1",
+      "createdAt": "2026-06-13T08:20:00.000Z"
+    }
+  }
 }
 ```
  * **Triggered Side Effect**: Broadcasts a WebSocket event `column_deleted` to notify clients to wipe the lane layout from their UI.
@@ -266,6 +275,7 @@ All requests must set the header `Content-Type: application/json`. Protected end
  * **Request Body**:
 ```json
 {
+  "id": "cc987654-32ba-cdba-feea-1234567890ab",
   "columnId": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
   "title": "Setup WebSocket Implementation",
   "content": "Integrate real-time capabilities via socket.io gateway.",
@@ -316,6 +326,15 @@ All requests must set the header `Content-Type: application/json`. Protected end
 {
   "status": "success",
   "message": "Card deleted successfully"
+  "data": {
+    "card": {
+      "id": "cc987654-32ba-cdba-feea-1234567890ab",
+      "columnId": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
+      "title": "Setup WebSocket Implementation",
+      "content": "Integrate real-time capabilities via socket.io gateway.",
+      "position": "1"
+    }
+  }
 }
 ```
  * **Triggered Side Effect**: Broadcasts `card_deleted` carrying the deleted card ID payload.
@@ -347,7 +366,7 @@ socket.emit('join_board', '7e2bb492-dac3-41c3-a178-63fffd17c7cd');
  * **column_updated**: Fires when a column is renamed or re-ordered layout-wise.
    * *Payload*: Updated Column object.
  * **column_deleted**: Fires when a column is dropped from the dashboard view.
-   * *Payload*: { id: "column-uuid" }
+   * *Payload*: Deleted Column object
 
 #### 🃏 Cards State Sync
  * **card_created**: Fires automatically whenever any team member creates a card under an authenticated space.
@@ -357,7 +376,7 @@ socket.emit('join_board', '7e2bb492-dac3-41c3-a178-63fffd17c7cd');
  * **card_updated**: Fires when a card's textual metadata shifts (such as modifying title or description content) while resting on the same spatial indexes.
    * *Payload*: Card object containing modified textual fields.
  * **card_deleted**: Fires when a card is dropped from the kanban layout workspace.
-   * *Payload*: { id: "card-uuid" }
+   * *Payload*: Deleted Card object
 
 ## 👥 Contribution Guidelines
 Contributions are always welcome! Please follow these clear steps to help maintain project sanity:
