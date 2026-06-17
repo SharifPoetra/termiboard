@@ -94,11 +94,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToLogin, onNavigat
         {/* HERO TYPOGRAPHY HEADER */}
         <div className="space-y-3 max-w-2xl">
           <h1 className="text-xl md:text-3xl font-extrabold tracking-tight text-slate-100 uppercase">
-            Collaborative Agile Data Stream Engine
+            Collaborative Terminal Kanban Shuttle
           </h1>
           <p className="text-xs md:text-sm text-slate-400 leading-relaxed max-w-xl mx-auto font-mono">
-            &gt;_ Orchestrate tasks, sync status lanes via real-time WebSocket tunnel bridges, and hack productivity
-            barriers inside a high-fidelity terminal environment.
+            &gt;_ SHUTTLE TASKS. MAP WORKFLOW MATRIX. orchestrate collaborative task cards, move visual data metrics
+            across status swimlanes, and optimize your team's throughput inside a low-level terminal environment.
           </p>
         </div>
 
