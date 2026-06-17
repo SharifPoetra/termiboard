@@ -6,9 +6,10 @@ import { Terminal, ShieldAlert } from 'lucide-react';
 
 interface RegisterPageProps {
   onNavigateToLogin: () => void;
+  onNavigateToHome: () => void;
 }
 
-export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin }) => {
+export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, onNavigateToHome }) => {
   const { register, isLoading, error, clearError } = useAuthStore();
 
   const [formData, setFormData] = useState({
@@ -44,7 +45,6 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin })
 
     try {
       await register(formData);
-      // If successful, automatically redirect to the login page
       alert('Registration successful! Please login.');
       onNavigateToLogin();
     } catch (err) {
@@ -122,11 +122,25 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin })
                 clearError();
                 onNavigateToLogin();
               }}
-              className="text-emerald-400 hover:underline bg-transparent border-none p-0 cursor-pointer"
+              className="text-emerald-400 hover:underline bg-transparent border-none p-0 cursor-pointer font-mono"
             >
               Access Account Here
             </button>
           </p>
+
+          {/* ESCAPE TRIGGER BUTTON TO BACK HOME */}
+          <div className="border-t border-slate-800/60 pt-4 mt-5 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                clearError();
+                onNavigateToHome();
+              }}
+              className="text-[10px] text-slate-600 hover:text-slate-400 tracking-widest uppercase transition-colors bg-transparent border-none cursor-pointer font-mono"
+            >
+              &lt; [ ESCAPE_TO_MAINFRAME ]
+            </button>
+          </div>
         </form>
       </div>
     </div>

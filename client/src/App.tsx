@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from './store/authStore';
+import { HomePage } from './features/home/pages/HomePage'; // Imported the brand new landing modifier page
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { RegisterPage } from './features/auth/pages/RegisterPage';
 import { DashboardPage } from './features/dashboard/pages/DashboardPage';
@@ -9,7 +10,9 @@ import { Button } from './components/ui/Button';
 
 export default function App() {
   const { isAuthenticated, user, isLoading, initializeAuth, logout } = useAuthStore();
-  const [view, setView] = useState<'login' | 'register'>('login');
+
+  // Adjusted navigation state scheme to include the cyberpunk home page landing arena
+  const [view, setView] = useState<'home' | 'login' | 'register'>('home');
 
   // State to track whether the user is opening the Dashboard Grid or viewing a specific Board
   const [showDashboard, setShowDashboard] = useState<boolean>(false);
@@ -82,13 +85,18 @@ export default function App() {
     );
   }
 
-  // IF NOT LOGGED IN, SET THE FORM NAVIGATION MENU
+  // IF NOT LOGGED IN, MULTI-ROUTE ROUTER ROUTING LOGIC BLOCK
+  if (view === 'home') {
+    return <HomePage onNavigateToLogin={() => setView('login')} onNavigateToRegister={() => setView('register')} />;
+  }
+
   return view === 'login' ? (
     <LoginPage
       onNavigateToRegister={() => setView('register')}
+      onNavigateToHome={() => setView('home')}
       onLoginSuccess={() => console.log('Successfully connected!')}
     />
   ) : (
-    <RegisterPage onNavigateToLogin={() => setView('login')} />
+    <RegisterPage onNavigateToLogin={() => setView('login')} onNavigateToHome={() => setView('home')} />
   );
 }

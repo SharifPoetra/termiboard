@@ -6,10 +6,11 @@ import { Terminal, ShieldAlert } from 'lucide-react';
 
 interface LoginPageProps {
   onNavigateToRegister: () => void;
+  onNavigateToHome: () => void;
   onLoginSuccess: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onLoginSuccess }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onNavigateToHome, onLoginSuccess }) => {
   const { login, isLoading, error, clearError } = useAuthStore();
 
   const [formData, setFormData] = useState({
@@ -41,7 +42,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onLo
 
     try {
       await login(formData);
-      onLoginSuccess(); // Trigger to redirect to main dashboard
+      onLoginSuccess();
     } catch (err) {
       // Error handled by store
     }
@@ -107,11 +108,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onLo
                 clearError();
                 onNavigateToRegister();
               }}
-              className="text-emerald-400 hover:underline bg-transparent border-none p-0 cursor-pointer"
+              className="text-emerald-400 hover:underline bg-transparent border-none p-0 cursor-pointer font-mono"
             >
               Request Access Token
             </button>
           </p>
+
+          {/* ESCAPE TRIGGER BUTTON TO BACK HOME */}
+          <div className="border-t border-slate-800/60 pt-4 mt-5 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                clearError();
+                onNavigateToHome();
+              }}
+              className="text-[10px] text-slate-600 hover:text-slate-400 tracking-widest uppercase transition-colors bg-transparent border-none cursor-pointer font-mono"
+            >
+              &lt; [ ESCAPE_TO_MAINFRAME ]
+            </button>
+          </div>
         </form>
       </div>
     </div>
