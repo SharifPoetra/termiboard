@@ -15,6 +15,7 @@ interface BoardState {
 interface BoardActions {
   fetchBoards: () => Promise<void>;
   createBoard: (boardData: { name: string; description: string }) => Promise<void>;
+  updateBoard: (boardId: string, boardData: { name?: string; description?: string }) => Promise<void>;
   setCurrentBoard: (board: Board | null) => void;
   deleteBoard: (boardId: string) => Promise<void>;
   clearError: () => void;
@@ -35,6 +36,7 @@ interface BoardActions {
   deleteCard: (cardId: string) => Promise<void>;
 
   // Real-time WS Sync Mutators
+  syncUpdateBoard: (board: Board) => void;
   syncAddColumn: (column: Column) => void;
   syncUpdateColumn: (column: Column) => void;
   syncDeleteColumn: (columnId: string) => void;
@@ -65,6 +67,35 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
     }
   },
 
+  // POST /api/boards
+  createBoard: async (boardData) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.post('/boards', boardData);
+      const newBoard = response.data.data.board;
+      set((state) => ({ boards: [newBoard, ...state.boards], isLoading: false }));
+    } catch (err: any) {
+      set({ isLoading: false, error: err.response?.data?.message || 'Failed to initialize board' });
+      throw err;
+    }
+  },
+
+  // PATCH /api/boards/:id
+  updateBoard: async (boardId, boardData) => {
+    try {
+      const response = await axiosInstance.patch(`/boards/${boardId}`, boardData);
+      const updatedBoard = response.data.data.board;
+
+      set((state) => ({
+        boards: state.boards.map((b) => (b.id === boardId ? updatedBoard : b)),
+        currentBoard: state.currentBoard?.id === boardId ? updatedBoard : state.currentBoard,
+      }));
+    } catch (err: any) {
+      set({ error: err.response?.data?.message || 'Failed to modify board parameters' });
+      throw err;
+    }
+  },
+
   // DELETE /api/boards/:id
   deleteBoard: async (boardId) => {
     try {
@@ -75,19 +106,6 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
       }));
     } catch (err: any) {
       set({ error: err.response?.data?.message || 'Failed to terminate board' });
-      throw err;
-    }
-  },
-
-  // POST /api/boards
-  createBoard: async (boardData) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.post('/boards', boardData);
-      const newBoard = response.data.data.board;
-      set((state) => ({ boards: [newBoard, ...state.boards], isLoading: false }));
-    } catch (err: any) {
-      set({ isLoading: false, error: err.response?.data?.message || 'Failed to initialize board' });
       throw err;
     }
   },
@@ -180,6 +198,13 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
   },
 
   // --- Real-time WS Sync Mutators ---
+  syncUpdateBoard: (updatedBoard) => {
+    set((state) => ({
+      boards: state.boards.map((b) => (b.id === updatedBoard.id ? updatedBoard : b)),
+      currentBoard: state.currentBoard?.id === updatedBoard.id ? updatedBoard : state.currentBoard,
+    }));
+  },
+
   syncAddColumn: (column) => {
     set((state) => {
       if (state.columns.some((c) => c.id === column.id)) return state;

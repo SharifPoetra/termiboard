@@ -5,7 +5,8 @@ import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { AlertModal } from '../../../components/ui/AlertModal';
-import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare, Trash2 } from 'lucide-react';
+import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare, Trash2, Edit2 } from 'lucide-react';
+import { EditBoardModal } from '../../../components/ui/EditBoardModal';
 
 interface DashboardPageProps {
   onSelectBoard: (boardId: string) => void;
@@ -13,12 +14,15 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) => {
   const { user, logout } = useAuthStore();
-  const { boards, fetchBoards, createBoard, deleteBoard, isLoading, error } = useBoardStore();
+  const { boards, fetchBoards, createBoard, updateBoard, deleteBoard, isLoading, error } = useBoardStore();
 
   const [newBoardName, setNewBoardName] = useState('');
   const [newBoardDesc, setNewBoardDesc] = useState('');
   const [formError, setFormError] = useState('');
   const [isEvacuated, setIsEvacuated] = useState(false);
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingBoard, setEditingBoard] = useState<{ id: string; name: string; description: string } | null>(null);
 
   useEffect(() => {
     fetchBoards();
@@ -52,13 +56,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
     }
   };
 
-  const [modalOpen, setModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedBoardData, setSelectedBoardData] = useState<{ id: string; name: string } | null>(null);
 
-  const handleOpenConfirm = (e: React.MouseEvent, boardId: string, boardName: string) => {
+  const handleDeleteOpenConfirm = (e: React.MouseEvent, boardId: string, boardName: string) => {
     e.stopPropagation(); // CRITICAL: Prevents triggering onSelectBoard when clicking the trash icon
     setSelectedBoardData({ id: boardId, name: boardName });
-    setModalOpen(true);
+    setDeleteModalOpen(true);
+  };
+
+  const handleOpenEdit = (e: React.MouseEvent, board: any) => {
+    e.stopPropagation(); // CRITICAL: Prevents triggering onSelectBoard when clicking the pencil icon
+    setEditingBoard({ id: board.id, name: board.name, description: board.description || '' });
+    setEditModalOpen(true);
   };
 
   const handleExecuteDelete = async () => {
@@ -68,7 +78,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
     } catch (err) {
       console.error('Board destruction sequence aborted', err);
     } finally {
-      setModalOpen(false);
+      setDeleteModalOpen(false);
       setSelectedBoardData(null);
     }
   };
@@ -178,8 +188,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
                     {/* ACTION ZONE: Contains timestamp and block-isolated trash purge event */}
                     <div className="flex items-center gap-3 shrink-0">
                       <span>{new Date(board.createdAt).toLocaleDateString()}</span>
+                      {/* EDIT BUTTON */}
                       <button
-                        onClick={(e) => handleOpenConfirm(e, board.id, board.name)}
+                        onClick={(e) => handleOpenEdit(e, board)}
+                        className="text-slate-500 hover:text-cyan-400 p-1 rounded hover:bg-slate-950 border border-transparent hover:border-slate-800/60 cursor-pointer transition-all duration-150"
+                        title="Modify Board Parameters"
+                      >
+                        <Edit2 size={12} />
+                      </button>
+                      {/* DELETE BUTTON */}
+                      <button
+                        onClick={(e) => handleDeleteOpenConfirm(e, board.id, board.name)}
                         className="text-slate-500 hover:text-red-400 p-1 rounded hover:bg-slate-950 border border-transparent hover:border-slate-800/60 cursor-pointer transition-all duration-150"
                         title="Purge Active Board Stream"
                       >
@@ -193,13 +212,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           )}
         </section>
       </main>
+      <EditBoardModal
+        isOpen={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setEditingBoard(null);
+        }}
+        initialData={editingBoard}
+        onConfirm={async (name, description) => {
+          if (editingBoard) await updateBoard(editingBoard.id, { name, description });
+        }}
+      />
       <ConfirmModal
-        isOpen={modalOpen}
+        isOpen={deleteModalOpen}
         title="Wipe Board Stream Meta"
         message={`Execute terminal purge on board stream: "${selectedBoardData?.name}"? This will destroy all nested columns and cards database grids permanently.`}
         onConfirm={handleExecuteDelete}
         onCancel={() => {
-          setModalOpen(false);
+          setDeleteModalOpen(false);
           setSelectedBoardData(null);
         }}
       />
