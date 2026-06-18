@@ -3,6 +3,7 @@ import { useAuthStore } from '../../../store/authStore';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { Terminal, ShieldAlert } from 'lucide-react';
+import { LegalModal } from '../../../components/ui/LegalModal';
 
 interface RegisterPageProps {
   onNavigateToLogin: () => void;
@@ -17,6 +18,11 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
     email: '',
     password: '',
   });
+
+  const [agreedToTerms, setAgreedToTerms] = useState<boolean>(false);
+  const [modalType, setModalType] = useState<'privacy' | 'terms'>('privacy');
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,6 +32,11 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
     }
   };
 
+  const openLegalModal = (type: 'privacy' | 'terms') => {
+    setModalType(type);
+    setIsModalOpen(true);
+  };
+
   const validateForm = () => {
     const errors: Record<string, string> = {};
     if (!formData.username.trim()) errors.username = 'Username is required';
@@ -33,6 +44,10 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
     else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Invalid email address';
     if (!formData.password) errors.password = 'Password is required';
     else if (formData.password.length < 6) errors.password = 'Min password length is 6 characters';
+
+    if (!agreedToTerms) {
+      errors.terms = 'You must accept the legal protocols to proceed';
+    }
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -110,7 +125,45 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
             disabled={isLoading}
           />
 
-          <Button type="submit" isLoading={isLoading} className="mt-2">
+          {/* LEGAL CHECKBOX SECTION */}
+          <div className="mb-5 mt-4">
+            <label className="flex items-start gap-3 text-slate-400 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => {
+                  setAgreedToTerms(e.target.checked);
+                  if (fieldErrors.terms) setFieldErrors({ ...fieldErrors, terms: '' });
+                }}
+                disabled={isLoading}
+                className="mt-0.5 accent-emerald-500 cursor-pointer w-3.5 h-3.5 border-slate-800 bg-slate-950 rounded"
+              />
+              <span className="text-[11px] leading-tight text-slate-400">
+                I accept the{' '}
+                <button
+                  type="button"
+                  onClick={() => openLegalModal('terms')}
+                  className="text-cyan-400 hover:underline bg-transparent border-none p-0 cursor-pointer inline font-mono"
+                >
+                  Terms of Use
+                </button>{' '}
+                and activate the{' '}
+                <button
+                  type="button"
+                  onClick={() => openLegalModal('privacy')}
+                  className="text-emerald-400 hover:underline bg-transparent border-none p-0 cursor-pointer inline font-mono"
+                >
+                  Privacy Policy
+                </button>
+              </span>
+            </label>
+            {fieldErrors.terms && (
+              <p className="text-[10px] text-red-400 mt-1.5 font-bold uppercase">&gt;_ {fieldErrors.terms}</p>
+            )}
+          </div>
+
+          {/* Disable button if checkbox not checked (optional defense layer) */}
+          <Button type="submit" isLoading={isLoading} disabled={!agreedToTerms || isLoading} className="mt-2">
             Execute Register
           </Button>
 
@@ -143,6 +196,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
           </div>
         </form>
       </div>
+      {/* LEGAL MODAL INJECTION */}
+      <LegalModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} type={modalType} />
     </div>
   );
 };
