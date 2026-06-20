@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { or, eq } from 'drizzle-orm';
 import { users } from '../../database/schema.ts';
 
@@ -36,7 +36,7 @@ export const registerHandler = async (request: FastifyRequest<{ Body: RegisterBo
     }
 
     // Hash the password securely using bcrypt
-    const saltRounds = 10;
+    const saltRounds = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
     // Insert the new user into Database
