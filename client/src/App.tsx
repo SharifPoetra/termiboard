@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from './store/authStore';
-import { HomePage } from './features/home/pages/HomePage'; // Imported the brand new landing modifier page
+import { HomePage } from './features/home/pages/HomePage';
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { RegisterPage } from './features/auth/pages/RegisterPage';
 import { DashboardPage } from './features/dashboard/pages/DashboardPage';
