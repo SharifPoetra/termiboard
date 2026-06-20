@@ -89,8 +89,6 @@ export const CardItem: React.FC<CardItemProps> = ({ card }) => {
           <X size={11} />
         </button>
       </div>
-
-      {/* TERMINAL MODIFIER DIALOG: For editing Title & Content */}
       <EditCardModal
         isOpen={isEditOpen}
         initialTitle={card.title}
@@ -98,8 +96,6 @@ export const CardItem: React.FC<CardItemProps> = ({ card }) => {
         onSave={handleSaveCardData}
         onCancel={() => setIsEditOpen(false)}
       />
-
-      {/* TERMINAL PURGE MODAL DIALOG: For confirmation deletions */}
       <ConfirmModal
         isOpen={isConfirmOpen}
         title="Purge Card Matrix Object"
