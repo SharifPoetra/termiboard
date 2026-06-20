@@ -5,7 +5,7 @@ interface EditCardModalProps {
   isOpen: boolean;
   initialTitle: string;
   initialContent: string;
-  onSave: (title: string, content: string) => Promise<void>; // Diubah ke Promise agar modal tahu kapan request selesai
+  onSave: (title: string, content: string) => Promise<void>;
   onCancel: () => void;
 }
 
