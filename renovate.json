@@ -1,8 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
+  "extends": ["config:recommended"],
   "labels": ["dependencies"],
   "packageRules": [
     {
@@ -13,18 +11,23 @@
     },
     {
       "description": "Group React ecosystem updates together since they must stay in sync",
-      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom"
+      ],
       "groupName": "React Ecosystem"
     },
     {
       "description": "Group Tailwind CSS packages together",
-      "matchPackagePatterns": ["^tailwindcss", "^@tailwindcss/"],
-      "groupName": "Tailwind CSS"
+      "groupName": "Tailwind CSS",
+      "matchPackageNames": ["/^tailwindcss/", "/^@tailwindcss//"]
     },
     {
       "description": "Group Fastify core and ecosystem together for the backend",
-      "matchPackagePatterns": ["^fastify", "^@fastify/"],
-      "groupName": "Fastify Ecosystem"
+      "groupName": "Fastify Ecosystem",
+      "matchPackageNames": ["/^fastify/", "/^@fastify//"]
     },
     {
       "description": "Group Socket.io and client client to prevent real-time version mismatches",
