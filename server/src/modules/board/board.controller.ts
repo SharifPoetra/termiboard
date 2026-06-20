@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { eq } from 'drizzle-orm';
-import { boards } from '../../database/schema.ts';
+import { eq, and } from 'drizzle-orm';
+import { boards, boardMembers } from '../../database/schema.ts';
 
 // Request body and params interfaces
 interface CreateBoardBody {
@@ -21,8 +21,6 @@ interface BoardParams {
 export const createBoardHandler = async (request: FastifyRequest, reply: FastifyReply) => {
   const { name, description } = request.body as CreateBoardBody;
   const { db } = request.server;
-
-  // request.user is automatically populated by @fastify/jwt after successful authentication
   const userId = (request.user as any).id;
 
   try {
@@ -40,11 +38,20 @@ export const createBoardHandler = async (request: FastifyRequest, reply: Fastify
         createdAt: boards.createdAt,
       });
 
+    const createdBoard = newBoard[0];
+
+    // Automatically register the creator as an 'admin' in the collaboration matrix
+    await db.insert(boardMembers).values({
+      boardId: createdBoard.id,
+      userId: userId,
+      role: 'admin',
+    });
+
     return reply.status(201).send({
       status: 'success',
       message: 'Board created successfully',
       data: {
-        board: newBoard[0],
+        board: createdBoard,
       },
     });
   } catch (err: any) {
@@ -62,7 +69,8 @@ export const getBoardsHandler = async (request: FastifyRequest, reply: FastifyRe
   const userId = (request.user as any).id;
 
   try {
-    const userBoards = await db
+    // SECURITY PATCH: Fetch boards where the user is either the owner OR a registered member
+    const ownedBoards = await db
       .select({
         id: boards.id,
         name: boards.name,
@@ -72,10 +80,27 @@ export const getBoardsHandler = async (request: FastifyRequest, reply: FastifyRe
       .from(boards)
       .where(eq(boards.userId, userId));
 
+    const collaboratedBoards = await db
+      .select({
+        id: boards.id,
+        name: boards.name,
+        description: boards.description,
+        createdAt: boards.createdAt,
+      })
+      .from(boardMembers)
+      .innerJoin(boards, eq(boardMembers.boardId, boards.id))
+      .where(eq(boardMembers.userId, userId));
+
+    // Merge and filter duplicate entries if any
+    const allBoardsMap = new Map();
+    ownedBoards.forEach((b) => allBoardsMap.set(b.id, b));
+    collaboratedBoards.forEach((b) => allBoardsMap.set(b.id, b));
+    const mergedBoards = Array.from(allBoardsMap.values());
+
     return reply.status(200).send({
       status: 'success',
       data: {
-        boards: userBoards,
+        boards: mergedBoards,
       },
     });
   } catch (err: any) {
@@ -91,20 +116,27 @@ export const getBoardsHandler = async (request: FastifyRequest, reply: FastifyRe
 export const getBoardByIdHandler = async (request: FastifyRequest, reply: FastifyReply) => {
   const { id } = request.params as BoardParams;
   const { db } = request.server;
+  const userId = (request.user as any).id;
 
   try {
-    const targetBoard = await db
-      .select({
-        id: boards.id,
-        name: boards.name,
-        description: boards.description,
-        createdAt: boards.createdAt,
-      })
-      .from(boards)
-      .where(eq(boards.id, id));
+    const targetBoard = await db.select().from(boards).where(eq(boards.id, id));
 
     if (targetBoard.length === 0) {
       return reply.status(404).send({ status: 'fail', message: 'Board not found' });
+    }
+
+    // SECURITY LAYER: Check if the requester is the owner or a member of the board
+    const isOwner = targetBoard[0].userId === userId;
+    const isMember = await db
+      .select()
+      .from(boardMembers)
+      .where(and(eq(boardMembers.boardId, id), eq(boardMembers.userId, userId)));
+
+    if (!isOwner && isMember.length === 0) {
+      return reply.status(403).send({
+        status: 'fail',
+        message: 'ACCESS_DENIED: You are not authorized to view this board ecosystem.',
+      });
     }
 
     return reply.status(200).send({
@@ -122,8 +154,28 @@ export const updateBoardHandler = async (request: FastifyRequest, reply: Fastify
   const { id } = request.params as BoardParams;
   const { name, description } = request.body as UpdateBoardBody;
   const { db, io } = request.server;
+  const userId = (request.user as any).id;
 
   try {
+    const targetBoard = await db.select().from(boards).where(eq(boards.id, id));
+    if (targetBoard.length === 0) {
+      return reply.status(404).send({ status: 'fail', message: 'Board not found' });
+    }
+
+    // SECURITY LAYER: Check if requester is Owner OR an Admin member
+    const isOwner = targetBoard[0].userId === userId;
+    const isAdmin = await db
+      .select()
+      .from(boardMembers)
+      .where(and(eq(boardMembers.boardId, id), eq(boardMembers.userId, userId), eq(boardMembers.role, 'admin')));
+
+    if (!isOwner && isAdmin.length === 0) {
+      return reply.status(403).send({
+        status: 'fail',
+        message: 'ACCESS_DENIED: Operational privileges insufficient to modify board metadata.',
+      });
+    }
+
     const updatedBoards = await db
       .update(boards)
       .set({
@@ -132,10 +184,6 @@ export const updateBoardHandler = async (request: FastifyRequest, reply: Fastify
       })
       .where(eq(boards.id, id))
       .returning();
-
-    if (updatedBoards.length === 0) {
-      return reply.status(404).send({ status: 'fail', message: 'Board not found' });
-    }
 
     // BROADCAST EVENT: Notify that this board is updated
     io.to(id).emit('board_updated', updatedBoards[0]);
@@ -155,11 +203,21 @@ export const updateBoardHandler = async (request: FastifyRequest, reply: Fastify
 export const deleteBoardHandler = async (request: FastifyRequest, reply: FastifyReply) => {
   const { id } = request.params as BoardParams;
   const { db, io } = request.server;
+  const userId = (request.user as any).id;
 
   try {
     const targetBoard = await db.select().from(boards).where(eq(boards.id, id));
     if (targetBoard.length === 0) {
       return reply.status(404).send({ status: 'fail', message: 'Board not found' });
+    }
+
+    // SECURITY LAYER: Absolute enforcement - Only the original OWNER can destroy a board matrix
+    const isOwner = targetBoard[0].userId === userId;
+    if (!isOwner) {
+      return reply.status(403).send({
+        status: 'fail',
+        message: 'CRITICAL_ACCESS_DENIED: Only the system creator (Owner) can execute an absolute drop sequence.',
+      });
     }
 
     await db.delete(boards).where(eq(boards.id, id));
