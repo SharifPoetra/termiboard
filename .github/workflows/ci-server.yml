@@ -1,0 +1,48 @@
+name: Server Continuous Integration (CI)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'server/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'server/**'
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+          cache-dependency-path: './package-lock.json'
+
+      - name: Install Dependencies (Root Environment)
+        run: npm ci
+
+      - name: Execute ESLint Matrix Validation
+        run: |
+          cd server
+          npm run lint
+
+      - name: Verify Code Formatting (Prettier)
+        run: |
+          cd server
+          npm run format -- --check
+
+      - name: Compile and Build Production Binary (TSC)
+        run: |
+          cd server
+          npm run build
