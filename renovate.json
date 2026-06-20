@@ -1,0 +1,54 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "labels": ["dependencies"],
+  "npm": {
+    "monorepoStableVersions": true
+  },
+  "packageRules": [
+    {
+      "description": "Group all development dependencies into a single PR weekly to avoid spam",
+      "matchDepTypes": ["devDependencies"],
+      "groupName": "All devDependencies",
+      "schedule": ["before 5am on monday"]
+    },
+    {
+      "description": "Group React ecosystem updates together since they must stay in sync",
+      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
+      "groupName": "React Ecosystem"
+    },
+    {
+      "description": "Group Tailwind CSS packages together",
+      "matchPackagePatterns": ["^tailwindcss", "^@tailwindcss/"],
+      "groupName": "Tailwind CSS"
+    },
+    {
+      "description": "Group Fastify core and ecosystem together for the backend",
+      "matchPackagePatterns": ["^fastify", "^@fastify/"],
+      "groupName": "Fastify Ecosystem"
+    },
+    {
+      "description": "Group Socket.io and client client to prevent real-time version mismatches",
+      "matchPackageNames": ["socket.io", "socket.io-client"],
+      "groupName": "Socket.io Suite"
+    },
+    {
+      "description": "Group Drizzle ORM and Drizzle Kit toolings together",
+      "matchPackageNames": ["drizzle-orm", "drizzle-kit"],
+      "groupName": "Drizzle ORM Engine"
+    },
+    {
+      "description": "Automatically approve and automerge lockfile-only updates if tests pass",
+      "matchUpdateTypes": ["pin", "digest"],
+      "automerge": true
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "groupName": "Security Vulnerability Patches",
+    "schedule": ["at any time"]
+  },
+  "timezone": "Asia/Jakarta"
+}
