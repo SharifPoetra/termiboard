@@ -175,7 +175,7 @@ All requests must set the header `Content-Type: application/json`. Protected end
 
 #### 🔹 Invite Collaborator to a Board
  * **Endpoint**: `POST /api/boards/invite`
- * **Auth Required**: Yes
+ * **Auth Required**: Yes (Requires Admin or Board Owner privileges)
  * **Request Body**:
 ```json
 {
@@ -183,6 +183,7 @@ All requests must set the header `Content-Type: application/json`. Protected end
   "email": "budi@example.com"
 }
 ```
+
  * **Success Response (201 Created)**:
 ```json
 {
@@ -199,6 +200,30 @@ All requests must set the header `Content-Type: application/json`. Protected end
   }
 }
 ```
+ * **Triggered Side Effect**: Broadcasts a WebSocket event `member_joined` containing the full participant metadata to the channel.
+
+#### 🔹 Kick Member or Leave Board
+ * **Endpoint**: `DELETE /api/boards/kick`
+ * **Auth Required**: Yes (Requires Admin/Owner privileges to kick others; Any member can send their own ID to leave)
+ * **Request Body**:
+```json
+{
+  "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
+  "userId": "33a9b122-8d77-44a3-bc12-990ffde111ab"
+}
+```
+ * **Success Response (200 OK)**:
+```json
+{
+  "status": "success",
+  "message": "Connection severed successfully. Member purged from board matrix.",
+  "data": {
+    "purgedUserId": "33a9b122-8d77-44a3-bc12-990ffde111ab"
+  }
+}
+```
+ * **Triggered Side Effect**: Broadcasts a WebSocket event `member_kicked` to force-evacuate and unmount the targeted user session inside the frontend viewport.
+
 
 ### 3. Columns Module (/api/columns)
 #### 🔹 Create a New Column
@@ -359,6 +384,18 @@ socket.emit('join_board', '7e2bb492-dac3-41c3-a178-63fffd17c7cd');
    * *Payload*: Updated Board object.
  * **board_deleted**: Fires when the board is completely deleted by the owner.
    * *Payload*: { id: "board-uuid" }
+
+#### 👥 Members State Sync
+ * **member_joined**: Fires automatically when an authorized administrator pushes a new collaborator into the current stream room.
+   * *Payload*: Full Member relation entity (id, boardId, userId, role, createdAt).
+ * **member_kicked**: Fires instantly when an entity is dropped by an administrator or triggers self-evacuation (Leave Board).
+   * *Payload*: 
+```json
+{
+  "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
+  "userId": "33a9b122-8d77-44a3-bc12-990ffde111ab"
+}
+```
 
 #### 🏛️ Columns State Sync
  * **column_created**: Fires automatically whenever any team member spawns a new list column.
