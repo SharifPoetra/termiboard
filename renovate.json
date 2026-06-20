@@ -4,7 +4,6 @@
     "config:recommended"
   ],
   "labels": ["dependencies"],
-  "monorepoStableVersions": true,
   "packageRules": [
     {
       "description": "Group all development dependencies into a single PR weekly to avoid spam",
