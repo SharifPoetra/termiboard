@@ -5,6 +5,7 @@ import fastifyJwt from '@fastify/jwt';
 import { Server } from 'socket.io';
 import { initDatabase } from './database/db.ts';
 import { initAuthMiddleware } from './middlewares/auth.middleware.ts';
+import { initCheckBoardAccessMiddleware } from './middlewares/boardAccess.middleware.ts';
 import { authRoutes } from './modules/auth/auth.routes.ts';
 import { boardRoutes } from './modules/board/board.routes.ts';
 import { columnRoutes } from './modules/column/column.routes.ts';
@@ -59,6 +60,7 @@ await app.register(fastifyJwt, {
 // Initialize Authentication Hooks & Database Connection
 await initAuthMiddleware(app);
 await initDatabase(app);
+await initCheckBoardAccessMiddleware(app);
 
 // Initialize Socket.io and attach it to Fastify's HTTP server instance
 const io = new Server(app.server, {
