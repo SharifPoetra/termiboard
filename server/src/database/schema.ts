@@ -53,5 +53,6 @@ export const boardMembers = pgTable('board_members', {
     .references(() => users.id, { onDelete: 'cascade' })
     .notNull(),
   role: varchar('role', { length: 20 }).default('member').notNull(), // Can be 'admin' or 'member'
+  status: varchar('status', { length: 20 }).default('pending').notNull(), // FLAG: 'pending' or 'active'
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

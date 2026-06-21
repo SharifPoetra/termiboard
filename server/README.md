@@ -173,9 +173,9 @@ All requests must set the header `Content-Type: application/json`. Protected end
 ```
  * **Triggered Side Effect**: Broadcasts a WebSocket event `board_deleted` to notify and force redirect all active clients viewing this channel.
 
-#### 🔹 Invite Collaborator to a Board
+#### 🔹 Invite Collaborator to a Board (Send Pending Invitation)
  * **Endpoint**: `POST /api/boards/invite`
- * **Auth Required**: Yes (Requires Admin or Board Owner privileges)
+ * **Auth Required**: Yes (Requires Active Admin or Board Owner privileges)
  * **Request Body**:
 ```json
 {
@@ -183,24 +183,69 @@ All requests must set the header `Content-Type: application/json`. Protected end
   "email": "budi@example.com"
 }
 ```
-
  * **Success Response (201 Created)**:
 ```json
 {
   "status": "success",
-  "message": "Member added successfully to the board",
+  "message": "Invitation sent successfully. Waiting for user acceptance.",
   "data": {
     "member": {
       "id": "91a14cc5-9922-4412-bd73-bb66ff82cba1",
       "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
       "userId": "33a9b122-8d77-44a3-bc12-990ffde111ab",
       "role": "member",
+      "status": "pending",
       "createdAt": "2026-06-13T08:57:42.000Z"
     }
   }
 }
 ```
- * **Triggered Side Effect**: Broadcasts a WebSocket event `member_joined` containing the full participant metadata to the channel.
+ * **Triggered Side Effect**: Dispatches an out-of-band WebSocket event `invitation_received` securely to the specific target user's namespace tunnel (`user_<userId>`).
+
+#### 🔹 Accept Pending Board Invitation
+ * **Endpoint**: `POST /api/boards/invite/accept`
+ * **Auth Required**: Yes (Must be the user bound to the pending invitation)
+ * **Request Body**:
+```json
+{
+  "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd"
+}
+```
+ * **Success Response (200 OK)**:
+```json
+{
+  "status": "success",
+  "message": "Invitation accepted successfully. Welcome to the board workspace.",
+  "data": {
+    "member": {
+      "id": "91a14cc5-9922-4412-bd73-bb66ff82cba1",
+      "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
+      "userId": "33a9b122-8d77-44a3-bc12-990ffde111ab",
+      "role": "member",
+      "status": "active",
+      "createdAt": "2026-06-13T08:57:42.000Z"
+    }
+  }
+}
+```
+ * **Triggered Side Effect**: Broadcasts a WebSocket event `member_joined` containing the activated member relation schema payload to all connected workspace channels.
+
+#### 🔹 Reject Pending Board Invitation
+ * **Endpoint**: `POST /api/boards/invite/reject`
+ * **Auth Required**: Yes (Must be the user bound to the pending invitation)
+ * **Request Body**:
+```json
+{
+  "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd"
+}
+```
+ * **Success Response (200 OK)**:
+```json
+{
+  "status": "success",
+  "message": "Invitation rejected and purged from matrix records."
+}
+```
 
 #### 🔹 Kick Member or Leave Board
  * **Endpoint**: `DELETE /api/boards/kick`
@@ -377,6 +422,15 @@ Connects an authorized socket client stream into a highly isolated space mapping
 socket.emit('join_board', '7e2bb492-dac3-41c3-a178-63fffd17c7cd');
 ```
 
+#### 📡 subscribe_notifications
+Connects an authenticated user session to their personal real-time inbox pipe (`user_<userId>`) to capture live ecosystem notifications like pending board invites.
+ * **Payload Data Type**: string (The target UUID of the authenticated User)
+ * **Usage Example**:
+```javascript
+socket.emit('subscribe_notifications', 'e4a8b792-51c3-4c4c-811a-7b3b4d4567ef');
+```
+
+
 ### Server-to-Client Broadcasts (Outbound Events)
 
 #### 📋 Boards State Sync
@@ -386,10 +440,19 @@ socket.emit('join_board', '7e2bb492-dac3-41c3-a178-63fffd17c7cd');
    * *Payload*: { id: "board-uuid" }
 
 #### 👥 Members State Sync
- * **member_joined**: Fires automatically when an authorized administrator pushes a new collaborator into the current stream room.
-   * *Payload*: Full Member relation entity (id, boardId, userId, role, createdAt).
- * **member_kicked**: Fires instantly when an entity is dropped by an administrator or triggers self-evacuation (Leave Board).
+* **invitation_received**: Fires directly into the isolated personal user notification room when an active admin sends them a board invitation.
    * *Payload*: 
+```json
+{
+  "message": "You have been invited to a new board matrix",
+  "data": { "id": "member-uuid", "boardId": "board-uuid", "status": "pending" }
+}
+```
+
+ * **member_joined**: Fires automatically to the entire board space **only after** the recipient officially triggers the accept sequence.
+   * *Payload*: Full Member object with status mutated to active.
+ * **member_kicked**: Fires instantly when an entity session is severed by an active administrator or triggers self-evacuation (Leave Board).
+   * *Payload*:
 ```json
 {
   "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",

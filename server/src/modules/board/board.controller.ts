@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or } from 'drizzle-orm';
 import { boards, boardMembers } from '../../database/schema.ts';
 
 // Request body and params interfaces
@@ -69,38 +69,25 @@ export const getBoardsHandler = async (request: FastifyRequest, reply: FastifyRe
   const userId = (request.user as any).id;
 
   try {
-    // SECURITY PATCH: Fetch boards where the user is either the owner OR a registered member
-    const ownedBoards = await db
-      .select({
+    const userBoards = await db
+      .selectDistinct({
         id: boards.id,
         name: boards.name,
         description: boards.description,
         createdAt: boards.createdAt,
       })
       .from(boards)
-      .where(eq(boards.userId, userId));
-
-    const collaboratedBoards = await db
-      .select({
-        id: boards.id,
-        name: boards.name,
-        description: boards.description,
-        createdAt: boards.createdAt,
-      })
-      .from(boardMembers)
-      .innerJoin(boards, eq(boardMembers.boardId, boards.id))
-      .where(eq(boardMembers.userId, userId));
-
-    // Merge and filter duplicate entries if any
-    const allBoardsMap = new Map();
-    ownedBoards.forEach((b) => allBoardsMap.set(b.id, b));
-    collaboratedBoards.forEach((b) => allBoardsMap.set(b.id, b));
-    const mergedBoards = Array.from(allBoardsMap.values());
-
+      .leftJoin(boardMembers, eq(boards.id, boardMembers.boardId))
+      .where(
+        or(
+          eq(boards.userId, userId), // Condition 1: User is the Owner
+          and(eq(boardMembers.userId, userId), eq(boardMembers.status, 'active')), // Condition 2: User is an Active Member
+        ),
+      );
     return reply.status(200).send({
       status: 'success',
       data: {
-        boards: mergedBoards,
+        boards: userBoards,
       },
     });
   } catch (err: any) {

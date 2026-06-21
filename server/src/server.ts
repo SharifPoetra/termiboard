@@ -81,6 +81,12 @@ io.on('connection', (socket) => {
     app.log.info(`📁 Socket client ${socket.id} joined Board Room: ${boardId}`);
   });
 
+  // Event listener on user personal room notification subscription
+  socket.on('subscribe_notifications', (userId) => {
+    socket.join(`user_${userId}`);
+    console.log(`👤 User ${userId} successfully locked into their personal notification room.`);
+  });
+
   // Client disconnection clean-up handler
   socket.on('disconnect', () => {
     app.log.info(`❌ User disconnected from WebSocket: ${socket.id}`);

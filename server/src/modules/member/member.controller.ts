@@ -12,6 +12,10 @@ interface KickMemberBody {
   userId: string;
 }
 
+interface ResponseInviteBody {
+  boardId: string;
+}
+
 export const addMemberHandler = async (request: FastifyRequest, reply: FastifyReply) => {
   const { boardId, email } = request.body as AddMemberBody;
   const { db, io } = request.server;
@@ -23,7 +27,12 @@ export const addMemberHandler = async (request: FastifyRequest, reply: FastifyRe
       .select()
       .from(boardMembers)
       .where(
-        and(eq(boardMembers.boardId, boardId), eq(boardMembers.userId, requesterId), eq(boardMembers.role, 'admin')),
+        and(
+          eq(boardMembers.boardId, boardId),
+          eq(boardMembers.userId, requesterId),
+          eq(boardMembers.role, 'admin'),
+          eq(boardMembers.status, 'active'),
+        ),
       );
 
     // SECURITY LAYER 2: Check if the requester is the original OWNER in the boards table
@@ -60,7 +69,10 @@ export const addMemberHandler = async (request: FastifyRequest, reply: FastifyRe
     if (existingMember.length > 0) {
       return reply.status(400).send({
         status: 'fail',
-        message: 'User is already a member of this board',
+        message:
+          existingMember[0].status === 'pending'
+            ? 'An invitation is already pending for this user.'
+            : 'User is already an active member of this board.',
       });
     }
 
@@ -71,15 +83,19 @@ export const addMemberHandler = async (request: FastifyRequest, reply: FastifyRe
         boardId,
         userId,
         role: 'member',
+        status: 'pending',
       })
       .returning();
 
-    // BROADCAST EVENT: Notify that a new member has successfully joined the stream matrix
-    io.to(boardId).emit('member_joined', newMember[0]);
+    // Emit to a specific target user's personal room notification if they are online
+    io.to(`user_${userId}`).emit('invitation_received', {
+      message: 'You have been invited to a new board matrix',
+      data: newMember[0],
+    });
 
     return reply.status(201).send({
       status: 'success',
-      message: 'Member added successfully to the board',
+      message: 'Invitation sent successfully. Waiting for user acceptance.',
       data: {
         member: newMember[0],
       },
@@ -90,6 +106,65 @@ export const addMemberHandler = async (request: FastifyRequest, reply: FastifyRe
       status: 'error',
       message: 'Internal server error',
     });
+  }
+};
+
+export const acceptInviteHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+  const { boardId } = request.body as ResponseInviteBody;
+  const { db, io } = request.server;
+  const userId = (request.user as any).id; // The user accepting the invite
+
+  try {
+    const updatedMember = await db
+      .update(boardMembers)
+      .set({ status: 'active' }) // Flip flag to active
+      .where(
+        and(eq(boardMembers.boardId, boardId), eq(boardMembers.userId, userId), eq(boardMembers.status, 'pending')),
+      )
+      .returning();
+
+    if (updatedMember.length === 0) {
+      return reply.status(404).send({ status: 'fail', message: 'No pending invitation found for this board.' });
+    }
+
+    // BROADCAST: Notify all other board members that a new collaborator has officially activated their session
+    io.to(boardId).emit('member_joined', updatedMember[0]);
+
+    return reply.status(200).send({
+      status: 'success',
+      message: 'Invitation accepted successfully. Welcome to the board workspace.',
+      data: { member: updatedMember[0] },
+    });
+  } catch (err: any) {
+    request.server.log.error(err, 'Accept invitation failed');
+    return reply.status(500).send({ status: 'error', message: 'Internal server error' });
+  }
+};
+
+export const rejectInviteHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+  const { boardId } = request.body as ResponseInviteBody;
+  const { db } = request.server;
+  const userId = (request.user as any).id;
+
+  try {
+    const deletedMember = await db
+      .delete(boardMembers)
+      .where(
+        and(eq(boardMembers.boardId, boardId), eq(boardMembers.userId, userId), eq(boardMembers.status, 'pending')),
+      )
+      .returning();
+
+    if (deletedMember.length === 0) {
+      return reply.status(404).send({ status: 'fail', message: 'No pending invitation found to reject.' });
+    }
+
+    return reply.status(200).send({
+      status: 'success',
+      message: 'Invitation rejected and purged from matrix records.',
+    });
+  } catch (err: any) {
+    request.server.log.error(err, 'Reject invitation failed');
+    return reply.status(500).send({ status: 'error', message: 'Internal server error' });
   }
 };
 
@@ -121,7 +196,12 @@ export const kickMemberHandler = async (request: FastifyRequest, reply: FastifyR
         .select()
         .from(boardMembers)
         .where(
-          and(eq(boardMembers.boardId, boardId), eq(boardMembers.userId, requesterId), eq(boardMembers.role, 'admin')),
+          and(
+            eq(boardMembers.boardId, boardId),
+            eq(boardMembers.userId, requesterId),
+            eq(boardMembers.role, 'admin'),
+            eq(boardMembers.status, 'active'),
+          ),
         );
 
       const isOwner = requesterId === boardOwnerId;
