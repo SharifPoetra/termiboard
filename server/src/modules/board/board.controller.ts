@@ -45,6 +45,7 @@ export const createBoardHandler = async (request: FastifyRequest, reply: Fastify
       boardId: createdBoard.id,
       userId: userId,
       role: 'admin',
+      status: 'active',
     });
 
     return reply.status(201).send({
