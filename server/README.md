@@ -271,6 +271,8 @@ All requests must set the header `Content-Type: application/json`. Protected end
 
 
 ### 3. Columns Module (/api/columns)
+> 🔐 **Security Note**: All endpoints in this module are protected by the Board Access Middleware. Users can only perform operations if they are the official Board Owner or an Active Collaborator. Unauthorized attempts will immediately yield a 403 Forbidden response.
+
 #### 🔹 Create a New Column
  * **Endpoint**: `POST /api/columns`
  * **Auth Required**: Yes
@@ -324,7 +326,7 @@ All requests must set the header `Content-Type: application/json`. Protected end
 ```json
 {
   "status": "success",
-  "message": "Column deleted successfully"
+  "message": "Column deleted successfully",
   "data": {
     "column": {
       "id": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
@@ -339,13 +341,14 @@ All requests must set the header `Content-Type: application/json`. Protected end
  * **Triggered Side Effect**: Broadcasts a WebSocket event `column_deleted` to notify clients to wipe the lane layout from their UI.
 
 ### 4. Cards Module (/api/cards)
+> 🔐 **Security Note**: All endpoints in this module are protected by the Board Access Middleware. Users can only perform operations if they are the official Board Owner or an Active Collaborator. Unauthorized attempts will immediately yield a 403 Forbidden response.
+
 #### 🔹 Create a New Task Card
  * **Endpoint**: `POST /api/cards`
  * **Auth Required**: Yes
  * **Request Body**:
 ```json
 {
-  "id": "cc987654-32ba-cdba-feea-1234567890ab",
   "columnId": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
   "title": "Setup WebSocket Implementation",
   "content": "Integrate real-time capabilities via socket.io gateway.",
@@ -395,7 +398,7 @@ All requests must set the header `Content-Type: application/json`. Protected end
 ```json
 {
   "status": "success",
-  "message": "Card deleted successfully"
+  "message": "Card deleted successfully",
   "data": {
     "card": {
       "id": "cc987654-32ba-cdba-feea-1234567890ab",

@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { eq } from 'drizzle-orm';
-import { cards, columns } from '../../database/schema.js';
+import { cards } from '../../database/schema.js';
 
 interface CreateCardBody {
   columnId: string;
@@ -30,16 +30,7 @@ export const createCardHandler = async (request: FastifyRequest, reply: FastifyR
   const { db, io } = request.server;
 
   try {
-    const targetColumn = await db.select({ boardId: columns.boardId }).from(columns).where(eq(columns.id, columnId));
-
-    if (targetColumn.length === 0) {
-      return reply.status(404).send({
-        status: 'fail',
-        message: 'Target column not found',
-      });
-    }
-
-    const boardId = targetColumn[0].boardId;
+    const boardId = (request as any).boardId;
 
     const newCard = await db
       .insert(cards)
@@ -105,17 +96,7 @@ export const updateCardHandler = async (request: FastifyRequest, reply: FastifyR
       return reply.status(404).send({ status: 'fail', message: 'Card not found' });
     }
 
-    // Target column is either the new one passed in request or the existing one
-    const targetColumnId = columnId || currentCard[0].columnId;
-
-    const targetColumn = await db
-      .select({ boardId: columns.boardId })
-      .from(columns)
-      .where(eq(columns.id, targetColumnId));
-    if (targetColumn.length === 0) {
-      return reply.status(404).send({ status: 'fail', message: 'Target column not found' });
-    }
-    const boardId = targetColumn[0].boardId;
+    const boardId = (request as any).boardId;
 
     // Update the card data
     const updatedCards = await db
@@ -153,26 +134,22 @@ export const deleteCardHandler = async (request: FastifyRequest, reply: FastifyR
   const { db, io } = request.server;
 
   try {
-    const targetCard = await db
-      .select()
-      .from(cards)
-      .innerJoin(columns, eq(cards.columnId, columns.id))
-      .where(eq(cards.id, id));
+    const targetCard = await db.select().from(cards).where(eq(cards.id, id));
 
     if (targetCard.length === 0) {
       return reply.status(404).send({ status: 'fail', message: 'Card not found' });
     }
-    const boardId = targetCard[0].columns.boardId;
+    const boardId = (request as any).boardId;
 
     await db.delete(cards).where(eq(cards.id, id));
 
     // BROADCAST EVENT: Notify that a card is deleted
-    io.to(boardId).emit('card_deleted', targetCard[0].cards);
+    io.to(boardId).emit('card_deleted', targetCard[0]);
 
     return reply.status(200).send({
       status: 'success',
       message: 'Card deleted successfully',
-      data: { card: targetCard[0].cards },
+      data: { card: targetCard[0] },
     });
   } catch (err: any) {
     request.server.log.error(err, 'Delete card failed');

@@ -11,7 +11,8 @@ declare module 'fastify' {
       JWT_SECRET: string;
     };
     db: TermiDb;
-    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     io: Server;
+    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    checkBoardAccess: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }

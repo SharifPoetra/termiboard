@@ -89,7 +89,7 @@ export const updateColumnHandler = async (request: FastifyRequest, reply: Fastif
     if (currentColumn.length === 0) {
       return reply.status(404).send({ status: 'fail', message: 'Column not found' });
     }
-    const boardId = currentColumn[0].boardId;
+    const boardId = (request as any).boardId;
 
     const updatedColumns = await db
       .update(columns)
@@ -124,7 +124,7 @@ export const deleteColumnHandler = async (request: FastifyRequest, reply: Fastif
     if (currentColumn.length === 0) {
       return reply.status(404).send({ status: 'fail', message: 'Column not found' });
     }
-    const boardId = currentColumn[0].boardId;
+    const boardId = (request as any).boardId;
 
     await db.delete(columns).where(eq(columns.id, id));
 
