@@ -73,14 +73,14 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
         {/* Terminal Header */}
         <div className="bg-slate-950 px-4 py-2 border-b border-slate-800 flex items-center gap-2">
           <Terminal size={16} className="text-emerald-400" />
-          <span className="text-xs font-bold text-slate-400 tracking-wider">CREATE_NEW_ACCOUNT.EXE</span>
+          <span className="text-xs font-bold text-slate-400 tracking-wider">USER_REGISTRATION.SYS</span>
         </div>
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6">
-          <h2 className="text-lg font-bold text-emerald-400 mb-2 tracking-wide">INITIALIZE USER</h2>
+          <h2 className="text-lg font-bold text-emerald-400 mb-2 tracking-wide">CREATE ACCOUNT</h2>
           <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-            Fill out the system parameters below to register a collaborative profile on TermiBoard.
+            Fill out the form below to create your collaborative workspace profile on TermiBoard.
           </p>
 
           {/* Error Message from Server */}
@@ -88,7 +88,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
             <div className="bg-red-950/30 border border-red-500/30 rounded p-3 mb-5 flex gap-2.5 items-start">
               <ShieldAlert className="text-red-400 shrink-0" size={18} />
               <div className="text-xs text-red-300 font-mono leading-tight">
-                <span className="font-bold uppercase">[System Error]:</span> {error}
+                <span className="font-bold uppercase">[Error]:</span> {error}
               </div>
             </div>
           )}
@@ -115,7 +115,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
           />
 
           <Input
-            label="Security Password"
+            label="Password"
             name="password"
             type="password"
             placeholder="••••••••"
@@ -164,11 +164,11 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
 
           {/* Disable button if checkbox not checked (optional defense layer) */}
           <Button type="submit" isLoading={isLoading} disabled={!agreedToTerms || isLoading} className="mt-2">
-            Execute Register
+            Register Account
           </Button>
 
           <p className="text-xs text-center text-slate-500 mt-6">
-            Already have an active token?{' '}
+            Already have an account?{' '}
             <button
               type="button"
               onClick={() => {
@@ -177,7 +177,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
               }}
               className="text-emerald-400 hover:underline bg-transparent border-none p-0 cursor-pointer font-mono"
             >
-              Access Account Here
+              Sign In
             </button>
           </p>
 
@@ -191,7 +191,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
               }}
               className="text-[10px] text-slate-600 hover:text-slate-400 tracking-widest uppercase transition-colors bg-transparent border-none cursor-pointer font-mono"
             >
-              &lt; [ ESCAPE_TO_MAINFRAME ]
+              &lt; [ BACK TO HOME ]
             </button>
           </div>
         </form>
