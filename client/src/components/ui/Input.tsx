@@ -16,7 +16,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({ label, error, c
               error
                 ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.15)] focus:border-red-400'
                 : 'border-slate-800 focus:border-emerald-500 focus:shadow-[0_0_8px_rgba(16,185,129,0.15)]'
-            } 
+            }
             placeholder:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
         {...props}
       />

@@ -47,7 +47,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
     try {
       await updateColumn(column.id, { name: columnName });
     } catch (err) {
-      console.error('Failed to patch column meta name', err);
+      console.error('Failed to update column name', err);
     } finally {
       setIsEditingTitle(false);
     }
@@ -70,7 +70,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
       setCardContent('');
       setIsAdding(false);
     } catch (err) {
-      console.error('Failed to inject new matrix card', err);
+      console.error('Failed to create task card', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -86,7 +86,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
     try {
       await deleteColumn(column.id);
     } catch (err) {
-      console.error('Purge execution failed', err);
+      console.error('Column deletion failed', err);
     } finally {
       setIsConfirmOpen(false);
     }
@@ -112,7 +112,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
             <h3
               onClick={() => setIsEditingTitle(true)}
               className="text-xs font-bold uppercase tracking-widest text-slate-300 truncate cursor-pointer hover:text-emerald-400 flex items-center gap-1 min-w-0"
-              title="Click to rename lane sequence"
+              title="Click to rename column"
             >
               <span className="truncate">{column.name}</span>
             </h3>
@@ -125,7 +125,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
         <button
           onClick={handleDeleteColumnClick}
           className="text-slate-500 hover:text-red-400 p-1 bg-transparent border-none cursor-pointer transition-colors shrink-0"
-          title="Purge Column Lane"
+          title="Delete Column"
         >
           <Trash2 size={13} />
         </button>
@@ -141,7 +141,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
         ))}
 
         {columnCards.length === 0 && !isAdding && (
-          <p className="text-[10px] text-slate-600 text-center py-4 uppercase tracking-wider">[ empty_lane ]</p>
+          <p className="text-[10px] text-slate-600 text-center py-4 uppercase tracking-wider">[ Column Empty ]</p>
         )}
 
         {/* INLINE CARD CREATION FORM */}
@@ -160,7 +160,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
               disabled={isSubmitting}
             />
             <textarea
-              placeholder="Task parameters (content)..."
+              placeholder="Task description..."
               value={cardContent}
               onChange={(e) => setCardContent(e.target.value)}
               className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] text-slate-300 focus:outline-none focus:border-emerald-500 transition-colors h-14 resize-none"
@@ -180,7 +180,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
                 className="text-[10px] uppercase bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-2.5 py-1 rounded cursor-pointer transition-colors flex items-center gap-1"
                 disabled={isSubmitting || !cardTitle.trim()}
               >
-                <Plus size={10} /> Push
+                <Plus size={10} /> Add
               </button>
             </div>
           </form>
@@ -194,7 +194,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
             onClick={() => setIsAdding(true)}
             className="w-full py-1.5 rounded border border-dashed border-slate-800 hover:border-slate-700 text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300 flex items-center justify-center gap-1 bg-transparent cursor-pointer transition-colors"
           >
-            <PlusCircle size={12} /> Append Task Card
+            <PlusCircle size={12} /> Add Task Card
           </button>
         </div>
       )}
@@ -202,8 +202,8 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
       {/* TERMINAL PURGE MODAL DIALOG */}
       <ConfirmModal
         isOpen={isConfirmOpen}
-        title="Wipe Column Lane Data Stream"
-        message={`Execute terminal purge on lane sequence: "${column.name}"? This action will destroy all containing task card parameters inside this grid.`}
+        title="Delete Column"
+        message={`Are you sure you want to delete the column "${column.name}"? This action will permanently remove all task cards inside it.`}
         onConfirm={handleExecuteDeleteColumn}
         onCancel={() => setIsConfirmOpen(false)}
       />

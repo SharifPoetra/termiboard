@@ -54,14 +54,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onNa
         {/* Terminal Header */}
         <div className="bg-slate-950 px-4 py-2 border-b border-slate-800 flex items-center gap-2">
           <Terminal size={16} className="text-emerald-400" />
-          <span className="text-xs font-bold text-slate-400 tracking-wider">SECURE_AUTHENTICATION.EXE</span>
+          <span className="text-xs font-bold text-slate-400 tracking-wider">USER_LOGIN.SYS</span>
         </div>
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6">
           <h2 className="text-lg font-bold text-emerald-400 mb-2 tracking-wide">SYSTEM ACCESS</h2>
           <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-            Please inject your credentials token to verify connection identity to the central grid.
+            Please enter your account email and security password to access your dashboard.
           </p>
 
           {/* Error Message from Server */}
@@ -69,13 +69,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onNa
             <div className="bg-red-950/30 border border-red-500/30 rounded p-3 mb-5 flex gap-2.5 items-start">
               <ShieldAlert className="text-red-400 shrink-0" size={18} />
               <div className="text-xs text-red-300 font-mono leading-tight">
-                <span className="font-bold uppercase">[Auth Aborted]:</span> {error}
+                <span className="font-bold uppercase">[Login Failed]:</span> {error}
               </div>
             </div>
           )}
 
           <Input
-            label="Identity Email"
+            label="Email Address"
             name="email"
             type="email"
             placeholder="user@termiboard.com"
@@ -86,7 +86,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onNa
           />
 
           <Input
-            label="Security Password"
+            label="Password"
             name="password"
             type="password"
             placeholder="••••••••"
@@ -97,7 +97,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onNa
           />
 
           <Button type="submit" isLoading={isLoading} className="mt-2">
-            Establish Session
+            Sign In to Dashboard
           </Button>
 
           <p className="text-xs text-center text-slate-500 mt-6">
@@ -110,7 +110,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onNa
               }}
               className="text-emerald-400 hover:underline bg-transparent border-none p-0 cursor-pointer font-mono"
             >
-              Request Access Token
+              Create An Account
             </button>
           </p>
 
@@ -124,7 +124,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onNa
               }}
               className="text-[10px] text-slate-600 hover:text-slate-400 tracking-widest uppercase transition-colors bg-transparent border-none cursor-pointer font-mono"
             >
-              &lt; [ ESCAPE_TO_MAINFRAME ]
+              &lt; [ BACK TO HOME ]
             </button>
           </div>
         </form>

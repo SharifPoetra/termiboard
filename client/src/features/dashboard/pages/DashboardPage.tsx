@@ -90,11 +90,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
           <Terminal className="text-emerald-400 animate-pulse shrink-0" size={18} />
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-xs md:text-sm font-bold tracking-widest text-slate-200 shrink-0">
-              TERMIBOARD_GRID //
-            </span>
+            <span className="text-xs md:text-sm font-bold tracking-widest text-slate-200 shrink-0">Dashboard //</span>
             <span className="text-[10px] md:text-xs text-slate-500 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 truncate max-w-[120px] sm:max-w-xs md:max-w-none">
-              SECURE_NODE: {user?.username}
+              User: {user?.username}
             </span>
           </div>
         </div>
@@ -103,19 +101,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           onClick={logout}
           className="text-[11px] md:text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 flex items-center gap-1.5 bg-transparent border-none cursor-pointer transition-colors shrink-0"
         >
-          <LogOut size={13} /> <span className="hidden xs:inline">[ KILL_SESSION ]</span>
-          <span className="xs:hidden">[ KILL ]</span>
+          <LogOut size={13} /> <span className="hidden xs:inline">[ LOGOUT ]</span>
+          <span className="xs:hidden">[ EXIT ]</span>
         </button>
       </header>
 
-      {/* MAIN LAYOUT WRAPPER - Highly Dynamic Responsive Grid */}
+      {/* MAIN LAYOUT */}
       <main className="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-        {/* LEFT COLUMN: CREATION CORE INJECTOR */}
+        {/* LEFT PANEL: CREATE BOARD */}
         <section className="bg-slate-900 border border-slate-800 rounded p-4 md:p-5 h-fit shadow-lg sm:col-span-1">
           <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
             <FolderPlus className="text-emerald-400 shrink-0" size={16} />
             <h2 className="text-[11px] md:text-xs font-bold uppercase tracking-widest text-slate-300">
-              SPAWN_NEW_BOARD
+              CREATE NEW BOARD
             </h2>
           </div>
 
@@ -123,7 +121,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
             <Input
               ref={inputRef}
               label="Board Name"
-              placeholder="e.g., Microservices Setup"
+              placeholder="e.g., Marketing Campaign"
               value={newBoardName}
               onChange={(e) => setNewBoardName(e.target.value)}
               error={formError || (error ? 'Deployment failed' : undefined)}
@@ -131,23 +129,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
             />
             <Input
               label="Description (Optional)"
-              placeholder="System parameters log..."
+              placeholder="Brief summary of this project..."
               value={newBoardDesc}
               onChange={(e) => setNewBoardDesc(e.target.value)}
               disabled={isLoading}
             />
             <Button type="submit" isLoading={isLoading} className="mt-2 w-full text-xs py-2.5">
-              Inject Board Stream
+              Create Project Board
             </Button>
           </form>
         </section>
 
-        {/* RIGHT COLUMN: BOARDS ACTIVE GRID LIST */}
+        {/* RIGHT PANEL: LIST BOARDS */}
         <section className="sm:col-span-2 lg:col-span-3 flex flex-col gap-4">
           <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
             <Layout className="text-emerald-400 shrink-0" size={16} />
             <h2 className="text-[11px] md:text-xs font-bold uppercase tracking-widest text-slate-300">
-              ACTIVE_PROJECT_STREAMS ({boards.length})
+              MY BOARDS ({boards.length})
             </h2>
           </div>
 
@@ -161,8 +159,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
                 size={32}
               />
               <p className="text-[11px] text-slate-500 group-hover:text-slate-300 tracking-wide uppercase px-2 font-mono transition-colors">
-                &gt; NO ACTIVE CHANNELS FOUND. <br></br>
-                <span className="text-emerald-400 underline">[ INITIALIZE NEW STREAM NOW ]</span>
+                &gt; No project boards found. <br></br>
+                <span className="text-emerald-400 underline">[ Create your first board now ]</span>
               </p>
             </div>
           ) : (
@@ -185,14 +183,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
                   <div className="border-t border-slate-950/60 pt-2.5 mt-auto flex items-center justify-between text-[10px] text-slate-600 font-mono gap-2 min-w-0">
                     <span className="truncate flex-1">ID: {board.id.substring(0, 8)}...</span>
 
-                    {/* ACTION ZONE: Contains timestamp and block-isolated trash purge event */}
+                    {/* ACTION ZONE */}
                     <div className="flex items-center gap-3 shrink-0">
                       <span>{new Date(board.createdAt).toLocaleDateString()}</span>
                       {/* EDIT BUTTON */}
                       <button
                         onClick={(e) => handleOpenEdit(e, board)}
                         className="text-slate-500 hover:text-cyan-400 p-1 rounded hover:bg-slate-950 border border-transparent hover:border-slate-800/60 cursor-pointer transition-all duration-150"
-                        title="Modify Board Parameters"
+                        title="Edit Board"
                       >
                         <Edit2 size={12} />
                       </button>
@@ -200,7 +198,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
                       <button
                         onClick={(e) => handleDeleteOpenConfirm(e, board.id, board.name)}
                         className="text-slate-500 hover:text-red-400 p-1 rounded hover:bg-slate-950 border border-transparent hover:border-slate-800/60 cursor-pointer transition-all duration-150"
-                        title="Purge Active Board Stream"
+                        title="Delete Board"
                       >
                         <Trash2 size={12} />
                       </button>
@@ -225,8 +223,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
       />
       <ConfirmModal
         isOpen={deleteModalOpen}
-        title="Wipe Board Stream Meta"
-        message={`Execute terminal purge on board stream: "${selectedBoardData?.name}"? This will destroy all nested columns and cards database grids permanently.`}
+        title="Delete Project Board"
+        message={`Are you sure you want to delete "${selectedBoardData?.name}"? This action will permanently delete all columns and cards inside this board.`}
         onConfirm={handleExecuteDelete}
         onCancel={() => {
           setDeleteModalOpen(false);
@@ -236,8 +234,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
 
       <AlertModal
         isOpen={isEvacuated}
-        title="Active Board Stream Terminated"
-        message="This secure board matrix environment has been broadcast-shredded by the root administrator. Immediate evacuation to core dashboard is required."
+        title="Board Deleted"
+        message="This project board has been deleted by the administrator. You are being redirected to the dashboard."
         onClose={() => setIsEvacuated(false)}
       />
     </div>
