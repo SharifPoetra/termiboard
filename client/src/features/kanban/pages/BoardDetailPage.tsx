@@ -168,7 +168,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-mono flex flex-col selection:bg-emerald-500/30">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-mono flex flex-col selection:bg-emerald-500/30 overflow-x-auto">
       {/* DASHBOARD WORKSPACE HEADER NAVBAR */}
       <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-6 py-3 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3 min-w-0">
@@ -181,19 +181,19 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
           <div className="flex items-center gap-2 min-w-0">
             <Terminal className="text-emerald-400 animate-pulse shrink-0" size={18} />
             <span className="text-xs md:text-sm font-bold text-slate-200 truncate tracking-wide flex items-center gap-2">
-              WORKSPACE_STREAM // {currentBoard ? currentBoard.name : `${boardId.substring(0, 8)}...`}
+              BOARD // {currentBoard ? currentBoard.name : `${boardId.substring(0, 8)}...`}
             </span>
             <button
               onClick={() => setEditModalOpen(true)}
               className="text-slate-500 hover:text-cyan-400 bg-transparent border-none p-0.5 cursor-pointer transition-colors"
-              title="Rename Board"
+              title="Edit Board"
             >
               <Edit2 size={11} />
             </button>
             <button
               onClick={handleDeleteBoardClick}
               className="text-slate-500 hover:text-cyan-400 bg-transparent border-none p-0.5 cursor-pointer transition-colors"
-              title="Nuke Board"
+              title="Delete Board"
             >
               <Trash2 size={11} />
             </button>
@@ -203,7 +203,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
         <div className="flex items-center gap-3">
           <div className="text-[10px] text-emerald-400 bg-slate-950 border border-emerald-500/20 px-2 py-0.5 rounded flex items-center gap-1.5 shadow-sm shrink-0">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-            <span>TUNNEL_LIVE</span>
+            <span>LIVE SYNC</span>
           </div>
         </div>
       </header>
@@ -214,7 +214,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
           <ColumnContainer key={column.id} column={column} />
         ))}
 
-        {/* INPUT SPITTING FOR CREATING NEW COLUMNS ELEMENT SEQUENCE */}
+        {/* COMPONENT CREATION FOR NEW COLUMNS */}
         <div className="w-72 sm:w-80 shrink-0">
           {isAddingColumn ? (
             <form
@@ -223,11 +223,11 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
             >
               <div>
                 <label className="block text-[10px] text-slate-500 uppercase tracking-widest mb-1 font-bold">
-                  New Lane Identifier
+                  Column Name
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g., Quality Assurance"
+                  placeholder="e.g., In Progress"
                   value={newColumnName}
                   onChange={(e) => setNewColumnName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
@@ -247,7 +247,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
                   className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-3 py-1 rounded cursor-pointer transition-colors uppercase flex items-center gap-1"
                   disabled={!newColumnName.trim()}
                 >
-                  <Plus size={12} /> Spawn
+                  <Plus size={12} /> Add
                 </button>
               </div>
             </form>
@@ -256,15 +256,15 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
               onClick={() => setIsAddingColumn(true)}
               className="w-full py-4 rounded border border-dashed border-slate-800 hover:border-emerald-500/20 bg-slate-900/20 hover:bg-slate-900/60 text-xs text-slate-500 hover:text-emerald-400 flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 uppercase tracking-wider"
             >
-              <LayoutGrid size={14} /> [ Append Status Lane ]
+              <LayoutGrid size={14} /> [ Add Column ]
             </button>
           )}
         </div>
       </main>
       <ConfirmModal
         isOpen={isConfirmOpen}
-        title="CRITICAL WARPING: Wipe Board Stream Data"
-        message="Execute terminal purge operation on the entire active board? This structural command will shred all nested status lanes, task matrices, and card blocks permanently."
+        title="Delete Board"
+        message="Are you sure you want to permanently delete this board? This will delete all columns and cards inside it."
         onConfirm={handleExecuteDeleteBoard}
         onCancel={() => setIsConfirmOpen(false)}
       />

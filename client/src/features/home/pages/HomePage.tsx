@@ -27,7 +27,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToLogin, onNavigat
         <div className="flex items-center gap-2">
           <Terminal className="text-emerald-400 animate-pulse" size={18} />
           <span className="text-xs font-bold tracking-widest uppercase text-slate-200">
-            TermiBoard // Mainframe_Gateway
+            TermiBoard // Workspace Gate
           </span>
         </div>
 
@@ -37,13 +37,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToLogin, onNavigat
             onClick={onNavigateToLogin}
             className="text-[11px] text-slate-400 hover:text-emerald-400 font-bold transition-colors uppercase bg-transparent border-none cursor-pointer"
           >
-            [ Sign_In ]
+            [ Sign In ]
           </button>
           <button
             onClick={onNavigateToRegister}
             className="text-[11px] bg-emerald-950/40 hover:bg-emerald-900/20 text-emerald-400 px-2.5 py-1 rounded border border-emerald-900/30 transition-all font-bold uppercase cursor-pointer"
           >
-            [ Register_Node ]
+            [ Sign Up ]
           </button>
         </div>
 
@@ -56,11 +56,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToLogin, onNavigat
         </button>
       </header>
 
-      {/* MOBILE DROPDOWN DRAWER OVERLAY */}
+      {/* MOBILE MENU DRAWER */}
       {isMenuOpen && (
         <div className="sm:hidden fixed inset-x-0 top-[49px] bg-slate-950 border-b border-slate-800 z-40 shadow-2xl p-4 flex flex-col gap-3 animate-in slide-in-from-top duration-200 font-mono">
           <div className="text-[9px] text-slate-600 uppercase tracking-widest border-b border-slate-900 pb-1">
-            // TERMINAL_AUTH_ACTIONS
+            // Account Navigation
           </div>
           <button
             onClick={() => {
@@ -69,7 +69,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToLogin, onNavigat
             }}
             className="w-full text-left text-xs font-bold text-slate-300 hover:text-emerald-400 bg-slate-900/50 border border-slate-900 px-3 py-2.5 rounded uppercase"
           >
-            &gt; [ Execute_Sign_In ]
+            &gt; [ Sign In ]
           </button>
           <button
             onClick={() => {
@@ -78,7 +78,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToLogin, onNavigat
             }}
             className="w-full text-left text-xs font-bold text-emerald-400 bg-emerald-950/20 border border-emerald-900/30 px-3 py-2.5 rounded uppercase"
           >
-            &gt; [ Spawn_New_Node ]
+            &gt; [ Create Account ]
           </button>
         </div>
       )}
@@ -94,11 +94,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToLogin, onNavigat
         {/* HERO TYPOGRAPHY HEADER */}
         <div className="space-y-3 max-w-2xl">
           <h1 className="text-xl md:text-3xl font-extrabold tracking-tight text-slate-100 uppercase">
-            Collaborative Terminal Kanban Shuttle
+            Minimalist Real-Time Kanban Board
           </h1>
           <p className="text-xs md:text-sm text-slate-400 leading-relaxed max-w-xl mx-auto font-mono">
-            &gt;_ SHUTTLE TASKS. MAP WORKFLOW MATRIX. orchestrate collaborative task cards, move visual data metrics
-            across status swimlanes, and optimize your team's throughput inside a low-level terminal environment.
+            &gt;_ Manage your projects with speed. Organize tasks into visual columns, collaborate with your team in
+            real time, and track progress through a clean, distraction-free terminal interface.
           </p>
         </div>
 
@@ -108,13 +108,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToLogin, onNavigat
             onClick={onNavigateToRegister}
             className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-5 py-3 text-xs rounded uppercase flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-lg shadow-emerald-950/30"
           >
-            Initialize Free Mainframe <ArrowRight size={14} />
+            Get Started Free <ArrowRight size={14} />
           </button>
           <button
             onClick={onNavigateToLogin}
             className="w-full sm:w-auto border border-slate-800 hover:border-slate-700 bg-slate-900/40 hover:bg-slate-900 text-slate-300 font-bold px-5 py-3 text-xs rounded uppercase flex items-center justify-center gap-2 cursor-pointer transition-colors"
           >
-            Access Open Terminal
+            Open Dashboard
           </button>
         </div>
 
@@ -124,10 +124,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToLogin, onNavigat
             <div className="text-emerald-400 p-1.5 bg-slate-950 border border-slate-800 w-fit rounded">
               <Activity size={14} />
             </div>
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wide">01 // WS_TUNNEL_LIVE</h3>
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wide">01 // Real-Time Sync</h3>
             <p className="text-[11px] text-slate-500 group-hover:text-slate-400 leading-relaxed transition-colors">
-              Instant matrix synchronization. Column movements and payload modifications update flawlessly across all
-              user pipelines.
+              Instant updates across team devices. Any card moved or column updated syncs flawlessly without page
+              reloads.
             </p>
           </div>
 
@@ -135,10 +135,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToLogin, onNavigat
             <div className="text-emerald-400 p-1.5 bg-slate-950 border border-slate-800 w-fit rounded">
               <Shield size={14} />
             </div>
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wide">02 // SECURE_ISOLATION</h3>
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wide">02 // Secure Workspace</h3>
             <p className="text-[11px] text-slate-500 group-hover:text-slate-400 leading-relaxed transition-colors">
-              Session validation keys and project payloads are guarded behind secure root access structures to shield
-              data metrics.
+              Your data is fully protected. Only invited team members can access, view, or modify private project
+              boards.
             </p>
           </div>
 
@@ -146,10 +146,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToLogin, onNavigat
             <div className="text-emerald-400 p-1.5 bg-slate-950 border border-slate-800 w-fit rounded">
               <Cpu size={14} />
             </div>
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wide">03 // TERMINAL_UX</h3>
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wide">03 // Fast Interface</h3>
             <p className="text-[11px] text-slate-500 group-hover:text-slate-400 leading-relaxed transition-colors">
-              Ditch heavy asset-bloated dashboards. Enjoy ultra-fast, snappy monospace visual parameters optimized for
-              power users.
+              Built without heavy assets. Enjoy an ultra-fast, snappy workspace designed to boost your daily
+              productivity.
             </p>
           </div>
         </section>

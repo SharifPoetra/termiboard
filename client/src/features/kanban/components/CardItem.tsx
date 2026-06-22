@@ -26,7 +26,7 @@ export const CardItem: React.FC<CardItemProps> = ({ card }) => {
     try {
       await updateCard(card.id, { title: newTitle, content: newContent });
     } catch (err) {
-      console.error('Failed to update card parameters matrix', err);
+      console.error('Failed to update card', err);
     } finally {
       setIsEditOpen(false);
     }
@@ -65,26 +65,26 @@ export const CardItem: React.FC<CardItemProps> = ({ card }) => {
       {/* METADATA FOOTER LAYER */}
       <div className="flex items-center justify-between text-[9px] text-slate-600 font-mono border-t border-slate-900/50 pt-2">
         <span className="flex items-center gap-0.5 truncate">
-          <Hash size={10} className="shrink-0" /> {card.id ? card.id.substring(0, 6) : 'matrix'}
+          <Hash size={10} className="shrink-0" /> {card.id ? card.id.substring(0, 6) : 'task'}
         </span>
         <span className="flex items-center gap-1 shrink-0">
           <Calendar size={10} /> {new Date(card.createdAt).toLocaleDateString()}
         </span>
       </div>
 
-      {/* ACTION TOOLBAR: edit and delete card */}
+      {/* ACTION TOOLBAR */}
       <div className="absolute top-2.5 right-2.5 flex items-center gap-1 z-10 bg-slate-950/90 pl-1 py-0.5 rounded backdrop-blur-xs">
         <button
           onClick={handleEditCardClick}
           className="text-slate-500 hover:text-emerald-400 p-1 rounded bg-slate-900 border border-slate-800 cursor-pointer shadow-sm transition-colors"
-          title="Patch Card Parameters"
+          title="Edit Task"
         >
           <Edit2 size={10} />
         </button>
         <button
           onClick={handleDeleteCardClick}
           className="text-slate-400 hover:text-red-400 p-1 rounded bg-slate-900 border border-slate-800 cursor-pointer shadow-sm transition-colors"
-          title="Purge Card"
+          title="Delete Task"
         >
           <X size={11} />
         </button>
@@ -99,7 +99,7 @@ export const CardItem: React.FC<CardItemProps> = ({ card }) => {
       <ConfirmModal
         isOpen={isConfirmOpen}
         title="Purge Card Matrix Object"
-        message={`Execute structural dump sequence on card parameter: "${card.title}"? This specific data node will be shredded permanently.`}
+        message={`Are you sure you want to delete the task card: "${card.title}"? This action cannot be undone.`}
         onConfirm={handleExecuteDeleteCard}
         onCancel={() => setIsConfirmOpen(false)}
       />
