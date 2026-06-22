@@ -21,12 +21,12 @@ export const LegalModal: React.FC<LegalModalProps> = ({ isOpen, onClose, type })
             {isPrivacy ? (
               <>
                 <ShieldCheck size={14} className="text-emerald-400" />
-                <span className="text-emerald-400">PRIVACY_POLICY_PROTOCOL.LOG</span>
+                <span className="text-emerald-400">PRIVACY_POLICY.txt</span>
               </>
             ) : (
               <>
                 <FileText size={14} className="text-cyan-400" />
-                <span className="text-cyan-400">TERMS_OF_USE_DECLARATION.MD</span>
+                <span className="text-cyan-400">TERMS_OF_USE.txt</span>
               </>
             )}
           </div>
@@ -47,46 +47,44 @@ export const LegalModal: React.FC<LegalModalProps> = ({ isOpen, onClose, type })
           {isPrivacy ? (
             /* PRIVACY POLICY CONTENT */
             <>
-              <h3 className="text-slate-200 font-bold uppercase text-xs">&gt; 01. Data Collection Matrices</h3>
+              <h3 className="text-slate-200 font-bold uppercase text-xs">&gt; 01. Information We Collect</h3>
               <p>
-                TermiBoard operates as a secure tunnel grid. We cache minimal authentication credentials (username,
-                secure hashed passwords, and communication emails) solely to provision database workspaces and sustain
-                user sessions.
+                TermiBoard collects basic profile parameters (username, email address, and encrypted passwords) solely
+                to create personal user workspaces and maintain secure session authorization.
               </p>
 
-              <h3 className="text-slate-200 font-bold uppercase text-xs">&gt; 02. Connection Logging</h3>
+              <h3 className="text-slate-200 font-bold uppercase text-xs">&gt; 02. Data Synchronization</h3>
               <p>
-                When interacting with our WebSocket real-time pipelines, active node status updates are synchronized
-                securely across authorized users on the same board lane. Your transactional metrics are isolated and not
-                harvested for third-party commercial index arrays.
+                When interacting with our real-time board system, changes are instantly synchronized across members of
+                the same board. Your board data is securely isolated and never sold or shared with third-party
+                advertising arrays.
               </p>
 
-              <h3 className="text-slate-200 font-bold uppercase text-xs">&gt; 03. Cookies & Security Tokens</h3>
+              <h3 className="text-slate-200 font-bold uppercase text-xs">&gt; 03. Storage & Security</h3>
               <p>
-                Local state management utilizes encrypted cookies and localStorage authentication payloads strictly
-                required to uphold session persistency. Purging your session kills the validation key permanently.
+                Local storage and session cookies are utilized strictly to ensure you stay signed in. Logging out of the
+                terminal will clear all authentication state tokens permanently.
               </p>
             </>
           ) : (
             /* TERMS OF USE CONTENT */
             <>
-              <h3 className="text-slate-200 font-bold uppercase text-xs">&gt; 01. Acceptance of Core Protocols</h3>
+              <h3 className="text-slate-200 font-bold uppercase text-xs">&gt; 01. User Account Responsibility</h3>
               <p>
-                By establishing an access token on TermiBoard, you explicitly bind your network footprint to these
-                operations. Authorization is personal, revocable, and non-transferable.
+                By creating an account on TermiBoard, you assume full responsibility for maintaining the security of
+                your login parameters. Access is personal and non-transferable.
               </p>
 
-              <h3 className="text-slate-200 font-bold uppercase text-xs">&gt; 02. Misuse & Node Flooding</h3>
+              <h3 className="text-slate-200 font-bold uppercase text-xs">&gt; 02. Acceptable Platform Use</h3>
               <p>
-                Users are strictly forbidden from abusing real-time WebSocket infrastructures, executing API injection
-                attacks, or flooding board stream pipelines with non-compliant automated payloads.
+                Users are strictly prohibited from exploiting real-time communication systems, attempting unauthorized
+                API injections, or overloading dashboard synchronization resources with automated spam bots.
               </p>
 
-              <h3 className="text-slate-200 font-bold uppercase text-xs">&gt; 03. Liability & Data Architecture</h3>
+              <h3 className="text-slate-200 font-bold uppercase text-xs">&gt; 03. Limitation of Liability</h3>
               <p>
-                TermiBoard is provided "as-is" under an agile architecture framework. While security measures are
-                deployed, developers accept no administrative liability for network dropouts, upstream host failures, or
-                tunnel desynchronization.
+                TermiBoard is provided on an "as-is" architecture framework. We are not liable for unexpected connection
+                dropouts, upstream hosting errors, or unpreventable data desynchronization.
               </p>
             </>
           )}

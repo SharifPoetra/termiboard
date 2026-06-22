@@ -21,7 +21,6 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Sync internal state with props whenever modal toggles open
   useEffect(() => {
     if (isOpen) {
       setTitle(initialTitle);
@@ -35,7 +34,7 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError('Task title matrix cannot be empty.');
+      setError('Task title cannot be empty.');
       return;
     }
 
@@ -44,7 +43,7 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
     try {
       await onSave(title.trim(), content.trim());
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to overwrite card data parameters.');
+      setError(err.response?.data?.message || 'Failed to update task card data.');
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +64,7 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
           <div className="flex items-center gap-2 text-emerald-400">
             <Cpu size={14} className="animate-pulse" />
             <span className="text-[10px] font-bold tracking-widest uppercase">
-              MATRIX_MODIFIER // PATCH_CARD_PARAMETERS
+              CARD_MODIFIER // EDIT_CARD_PROPERTIES
             </span>
           </div>
           <div className="flex items-center gap-1 text-slate-600 text-[9px]">
@@ -74,10 +73,9 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
           </div>
         </div>
 
-        {/* FORM INJECTOR */}
+        {/* FORM */}
         <form onSubmit={handleSubmit}>
           <div className="p-4 md:p-5 space-y-4">
-            {/* ERROR BANNER MATRIX */}
             {error && (
               <p className="text-[10px] text-red-400 uppercase font-bold tracking-wider bg-red-950/20 border border-red-900/30 px-3 py-2 rounded">
                 &gt;_ ERROR: {error}
@@ -87,13 +85,13 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
             {/* FIELD: TITLE */}
             <div className="space-y-1.5">
               <label className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">
-                &gt; Task Parameter Title
+                &gt; Task Title
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Modify title data..."
+                placeholder="Enter task title..."
                 className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded px-3 py-2 text-xs text-slate-100 focus:outline-none transition-colors font-mono"
                 disabled={isLoading}
                 autoFocus
@@ -101,15 +99,15 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
               />
             </div>
 
-            {/* FIELD: CONTENT / DESCRIPTION */}
+            {/* FIELD: CONTENT */}
             <div className="space-y-1.5">
               <label className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">
-                &gt; System Logging Payload (Content)
+                &gt; Task Description
               </label>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="Modify content log metrics..."
+                placeholder="Enter task description or content..."
                 className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded px-3 py-2 text-xs text-slate-300 focus:outline-none transition-colors font-mono h-28 resize-none leading-relaxed"
                 disabled={isLoading}
               />
@@ -124,14 +122,14 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
               disabled={isLoading}
               className="text-[10px] uppercase tracking-wider text-slate-500 hover:text-slate-400 bg-transparent border-none cursor-pointer transition-colors disabled:opacity-40"
             >
-              [ Abort ]
+              [ Cancel ]
             </button>
             <button
               type="submit"
               disabled={isLoading || !title.trim()}
-              className="text-[10px] uppercase tracking-wider bg-emerald-950/40 hover:bg-emerald-900/30 text-emerald-400 font-bold px-3 py-1.5 rounded border border-emerald-900/40 cursor-pointer transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              className="text-[10px] uppercase tracking-wider bg-emerald-950/40 hover:bg-emerald-900/30 text-emerald-400 font-bold px-3 py-1.5 rounded border border-emerald-900/40 cursor-pointer transition-colors shadow-sm disabled:opacity-40"
             >
-              {isLoading ? '[ Overwriting... ]' : '[ Inject Patch ]'}
+              {isLoading ? '[ Saving... ]' : '[ Save Changes ]'}
             </button>
           </div>
         </form>

@@ -14,7 +14,6 @@ export const EditBoardModal: React.FC<EditBoardModalProps> = ({ isOpen, onClose,
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Sync internal state with props whenever modal toggles open or initialData streams in
   useEffect(() => {
     if (isOpen && initialData) {
       setName(initialData.name);
@@ -28,7 +27,7 @@ export const EditBoardModal: React.FC<EditBoardModalProps> = ({ isOpen, onClose,
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError('Matrix identity path (name) cannot be empty.');
+      setError('Board name cannot be empty.');
       return;
     }
 
@@ -38,7 +37,7 @@ export const EditBoardModal: React.FC<EditBoardModalProps> = ({ isOpen, onClose,
       await onConfirm(name.trim(), description.trim());
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to patch database matrix.');
+      setError(err.response?.data?.message || 'Failed to update board settings.');
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +55,7 @@ export const EditBoardModal: React.FC<EditBoardModalProps> = ({ isOpen, onClose,
           <div className="flex items-center gap-2 text-emerald-400">
             <Cpu size={14} className="animate-pulse" />
             <span className="text-[10px] font-bold tracking-widest uppercase">
-              BOARD_MODIFIER // PATCH_STREAM_PARAMETERS
+              BOARD_MODIFIER // EDIT_BOARD_PROPERTIES
             </span>
           </div>
           <div className="flex items-center gap-1 text-slate-600 text-[9px]">
@@ -65,7 +64,7 @@ export const EditBoardModal: React.FC<EditBoardModalProps> = ({ isOpen, onClose,
           </div>
         </div>
 
-        {/* FORM INJECTOR */}
+        {/* FORM */}
         <form onSubmit={handleSubmit}>
           <div className="p-4 md:p-5 space-y-4">
             {error && (
@@ -77,13 +76,13 @@ export const EditBoardModal: React.FC<EditBoardModalProps> = ({ isOpen, onClose,
             {/* FIELD: BOARD NAME */}
             <div className="space-y-1.5">
               <label className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">
-                &gt; Board Stream Identity Name
+                &gt; Board Name
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Modify board name data..."
+                placeholder="Enter board name..."
                 className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded px-3 py-2 text-xs text-slate-100 focus:outline-none transition-colors font-mono"
                 disabled={isLoading}
                 autoFocus
@@ -94,12 +93,12 @@ export const EditBoardModal: React.FC<EditBoardModalProps> = ({ isOpen, onClose,
             {/* FIELD: DESCRIPTION */}
             <div className="space-y-1.5">
               <label className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">
-                &gt; System Logging Payload (Description)
+                &gt; Board Description
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Modify system parameters log..."
+                placeholder="Enter board description..."
                 className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded px-3 py-2 text-xs text-slate-300 focus:outline-none transition-colors font-mono h-24 resize-none leading-relaxed"
                 disabled={isLoading}
               />
@@ -114,14 +113,14 @@ export const EditBoardModal: React.FC<EditBoardModalProps> = ({ isOpen, onClose,
               disabled={isLoading}
               className="text-[10px] uppercase tracking-wider text-slate-500 hover:text-slate-400 bg-transparent border-none cursor-pointer transition-colors disabled:opacity-40"
             >
-              [ Abort ]
+              [ Cancel ]
             </button>
             <button
               type="submit"
               disabled={isLoading || !name.trim()}
-              className="text-[10px] uppercase tracking-wider bg-emerald-950/40 hover:bg-emerald-900/30 text-emerald-400 font-bold px-3 py-1.5 rounded border border-emerald-900/40 cursor-pointer transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              className="text-[10px] uppercase tracking-wider bg-emerald-950/40 hover:bg-emerald-900/30 text-emerald-400 font-bold px-3 py-1.5 rounded border border-emerald-900/40 cursor-pointer transition-colors shadow-sm disabled:opacity-40"
             >
-              {isLoading ? '[ Overwriting... ]' : '[ Inject Patch ]'}
+              {isLoading ? '[ Saving... ]' : '[ Save Changes ]'}
             </button>
           </div>
         </form>

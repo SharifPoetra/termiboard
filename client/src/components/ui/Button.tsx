@@ -13,7 +13,6 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  // Terminal-themed button color variation mapping
   const baseStyle =
     'w-full py-2 px-4 font-mono text-xs font-bold uppercase tracking-widest rounded transition-all duration-200 shadow-md focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed';
 
@@ -28,7 +27,7 @@ export const Button: React.FC<ButtonProps> = ({
       {isLoading ? (
         <span className="flex items-center justify-center gap-2">
           <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          [ RUNNING... ]
+          [ LOADING... ]
         </span>
       ) : (
         children

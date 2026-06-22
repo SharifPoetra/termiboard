@@ -22,11 +22,11 @@ export const AlertModal: React.FC<AlertModalProps> = ({ isOpen, title, message, 
         <div className="bg-slate-950 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2 text-red-500">
             <ShieldAlert size={14} className="animate-bounce" />
-            <span className="text-[10px] font-bold tracking-widest uppercase">BROKER_NOTICE // EVACUATION_ALARM</span>
+            <span className="text-[10px] font-bold tracking-widest uppercase">SYSTEM_NOTICE // ALERT</span>
           </div>
           <div className="flex items-center gap-1 text-slate-600 text-[9px]">
             <Terminal size={10} />
-            <span>WS_STREAM</span>
+            <span>LIVE_STREAM</span>
           </div>
         </div>
 
@@ -34,7 +34,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({ isOpen, title, message, 
         <div className="p-5 text-center space-y-3">
           <h3 className="text-xs font-bold text-red-400 uppercase tracking-widest">{title}</h3>
           <p className="text-[11px] text-slate-300 leading-relaxed uppercase bg-slate-950/60 p-4 rounded border border-slate-800/80 font-mono text-left">
-            [SYS_ERR] &gt; {message}
+            [ERROR] &gt; {message}
           </p>
         </div>
 
@@ -45,7 +45,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({ isOpen, title, message, 
             onClick={onClose}
             className="w-full text-[10px] uppercase tracking-wider bg-red-950/30 hover:bg-red-900/40 text-red-400 font-bold py-2 rounded border border-red-950 hover:border-red-500/50 cursor-pointer transition-all duration-150 shadow-inner"
           >
-            [ Acknowledge & Terminate Session ]
+            [ Dismiss Alert ]
           </button>
         </div>
       </div>
