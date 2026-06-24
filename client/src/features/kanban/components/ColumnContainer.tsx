@@ -4,6 +4,8 @@ import { useBoardStore } from '../../../store/boardStore';
 import { CardItem } from './CardItem';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { Plus, PlusCircle, Trash2 } from 'lucide-react';
+import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
 interface ColumnContainerProps {
   column: Column;
@@ -19,14 +21,16 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
   const [cardContent, setCardContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // States for dynamic inline title updates
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [columnName, setColumnName] = useState(column.name);
-
-  // State for Custom Confirmation Modal
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-  // Sync state if column name is mutated from external WS stream
+  // dnd-kit droppable connection to make this column container targetable by dragged items
+  const { setNodeRef } = useDroppable({
+    id: column.id,
+  });
+
+  // Sync internal input state whenever column name is mutated from external WS stream
   useEffect(() => {
     setColumnName(column.name);
   }, [column.name]);
@@ -38,6 +42,9 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
   }, [column.id, fetchCards]);
 
   const columnCards = cards[column.id] || [];
+
+  // Extract clean array of primitive IDs required by SortableContext strategy to map items correctly
+  const cardIds = columnCards.map((c) => c.id);
 
   const handleUpdateColumnName = async () => {
     if (!columnName.trim() || columnName === column.name) {
@@ -76,12 +83,10 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
     }
   };
 
-  // Triggers the visual modal state instead of native blocking prompt
   const handleDeleteColumnClick = () => {
     setIsConfirmOpen(true);
   };
 
-  // Handles the actual API execution once user acknowledges inside the custom modal
   const handleExecuteDeleteColumn = async () => {
     try {
       await deleteColumn(column.id);
@@ -93,7 +98,10 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded flex flex-col max-h-[75vh] w-72 sm:w-80 shrink-0 shadow-md font-mono">
+    <div
+      ref={setNodeRef}
+      className="bg-slate-900 border border-slate-800 rounded flex flex-col max-h-[75vh] w-72 sm:w-80 shrink-0 shadow-md font-mono"
+    >
       {/* COLUMN HEADER CONTROLS */}
       <div className="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-900/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2">
@@ -133,12 +141,13 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
 
       {/* TASK CARDS STREAM LIST */}
       <div className="flex-1 p-3 overflow-y-auto space-y-2 custom-scrollbar bg-slate-900/30">
-        {columnCards.map((card: Card) => (
-          <div key={card.id} className="relative">
-            {/* Kept extremely clean, structural elements moved inside CardItem */}
-            <CardItem card={card} />
-          </div>
-        ))}
+        <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
+          {columnCards.map((card: Card) => (
+            <div key={card.id} className="relative">
+              <CardItem card={card} />
+            </div>
+          ))}
+        </SortableContext>
 
         {columnCards.length === 0 && !isAdding && (
           <p className="text-[10px] text-slate-600 text-center py-4 uppercase tracking-wider">[ Column Empty ]</p>
@@ -199,7 +208,6 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
         </div>
       )}
 
-      {/* TERMINAL PURGE MODAL DIALOG */}
       <ConfirmModal
         isOpen={isConfirmOpen}
         title="Delete Column"

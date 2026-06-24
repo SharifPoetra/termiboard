@@ -35,6 +35,10 @@ interface BoardActions {
   ) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
 
+  // Drag and Drop Internal Handler
+  moveCard: (cardId: string, targetId: string) => Promise<void>;
+  persistCardPosition: (cardId: string, targetColumnId: string, newPosition: string) => Promise<void>;
+
   // Real-time WS Sync Mutators
   syncUpdateBoard: (board: Board) => void;
   syncAddColumn: (column: Column) => void;
@@ -45,7 +49,7 @@ interface BoardActions {
   syncDeleteCard: (card: Card) => void;
 }
 
-export const useBoardStore = create<BoardState & BoardActions>((set) => ({
+export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
   boards: [],
   currentBoard: null,
   columns: [],
@@ -197,6 +201,89 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
     }
   },
 
+  // Local state mutator for instant drag-and-drop feedback
+  moveCard: async (cardId, targetId) => {
+    const state = get();
+    let sourceColumnId = '';
+    let targetColumnId = '';
+    let cardToMove: Card | null = null;
+
+    // Locate the source column and the specific card being dragged
+    Object.keys(state.cards).forEach((colId) => {
+      const found = state.cards[colId].find((c) => c.id === cardId);
+      if (found) {
+        sourceColumnId = colId;
+        cardToMove = found;
+      }
+    });
+
+    if (!cardToMove || !sourceColumnId) return;
+    const activeCard: Card = cardToMove;
+
+    // Determine the target column (targetId could be a column ID or another card ID)
+    if (state.cards[targetId]) {
+      targetColumnId = targetId;
+    } else {
+      Object.keys(state.cards).forEach((colId) => {
+        if (state.cards[colId].some((c) => c.id === targetId)) {
+          targetColumnId = colId;
+        }
+      });
+    }
+
+    if (!targetColumnId) return;
+
+    const sourceCards = [...(state.cards[sourceColumnId] || [])];
+    const targetCards = sourceColumnId === targetColumnId ? sourceCards : [...(state.cards[targetColumnId] || [])];
+
+    const cleanSource = sourceCards.filter((c) => c.id !== cardId);
+    let targetIndex = targetCards.findIndex((c) => c.id === targetId);
+    if (targetIndex === -1) targetIndex = targetCards.length;
+
+    const updatedCard = { ...activeCard, columnId: targetColumnId };
+
+    // Handling sorting transformation inside the exact same column
+    if (sourceColumnId === targetColumnId) {
+      const currentIndex = sourceCards.findIndex((c) => c.id === cardId);
+      if (currentIndex === targetIndex) return; // Prevent unnecessary re-renders if position unchanged
+
+      cleanSource.splice(targetIndex, 0, updatedCard);
+      // Re-index array indices to sequential normalized strings (1-based position property)
+      const finalCards = cleanSource.map((c, idx) => ({ ...c, position: String(idx + 1) }));
+
+      set({ cards: { ...state.cards, [sourceColumnId]: finalCards } });
+    } else {
+      // Handling structural lane crossing movement between two different columns
+      targetCards.splice(targetIndex, 0, updatedCard);
+      const finalSource = cleanSource.map((c, idx) => ({ ...c, position: String(idx + 1) }));
+      const finalTarget = targetCards.map((c, idx) => ({ ...c, position: String(idx + 1) }));
+
+      set({
+        cards: {
+          ...state.cards,
+          [sourceColumnId]: finalSource,
+          [targetColumnId]: finalTarget,
+        },
+      });
+    }
+  },
+
+  // Database synchronization provider to persist final ordering matrix
+  // PATCH /api/cards/:id
+  persistCardPosition: async (cardId, targetColumnId, newPosition) => {
+    try {
+      await axiosInstance.patch(`/cards/${cardId}`, {
+        columnId: targetColumnId,
+        position: newPosition,
+      });
+    } catch (err: any) {
+      set({
+        error: err.response?.data?.message || 'Failed to persist drag positioning to database',
+      });
+      throw err;
+    }
+  },
+
   // --- Real-time WS Sync Mutators ---
   syncUpdateBoard: (updatedBoard) => {
     set((state) => ({
@@ -243,16 +330,17 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
 
   syncUpdateCard: (updatedCard) => {
     set((state) => {
+      // Evacuate card if it shifted column paths externally via WS stream frames
+      const nextCards = { ...state.cards };
+      Object.keys(nextCards).forEach((colId) => {
+        nextCards[colId] = nextCards[colId].filter((c) => c.id !== updatedCard.id);
+      });
+
       const colId = updatedCard.columnId;
-      const currentTrack = state.cards[colId] || [];
-      return {
-        cards: {
-          ...state.cards,
-          [colId]: currentTrack
-            .map((c) => (c.id === updatedCard.id ? updatedCard : c))
-            .sort((a, b) => Number(a.position) - Number(b.position)),
-        },
-      };
+      const currentTrack = nextCards[colId] || [];
+      nextCards[colId] = [...currentTrack, updatedCard].sort((a, b) => Number(a.position) - Number(b.position));
+
+      return { cards: nextCards };
     });
   },
 
