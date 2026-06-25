@@ -4,7 +4,20 @@ import { useSocket } from '../../../hooks/useSocket';
 import { ColumnContainer } from '../components/ColumnContainer';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { EditBoardModal } from '../../../components/ui/EditBoardModal';
+import { CardItem } from '../components/CardItem';
+import { Card } from '../types/kanban.types';
 import { ArrowLeft, Plus, Terminal, LayoutGrid, Edit2, Trash2 } from 'lucide-react';
+
+import {
+  DndContext,
+  DragStartEvent,
+  DragEndEvent,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 
 interface BoardDetailPageProps {
   boardId: string;
@@ -14,6 +27,7 @@ interface BoardDetailPageProps {
 export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBackToDashboard }) => {
   const {
     columns,
+    cards,
     currentBoard,
     boards,
     deleteBoard,
@@ -21,6 +35,8 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     fetchColumns,
     createColumn,
     updateBoard,
+    moveCard,
+    persistCardPosition,
     syncUpdateBoard,
     syncAddColumn,
     syncUpdateColumn,
@@ -30,11 +46,20 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     syncDeleteCard,
   } = useBoardStore();
 
-  // Structural control states for modals
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
   const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const [activeCard, setActiveCard] = useState<Card | null>(null);
+
+  // Guard flag to temporarily ignore incoming echo reflections from WS during local dragging
+  const isLocallyDragging = useRef(false);
+
+  // Isolate native clicks and text selections from mobile/pointer panning gestures
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+  );
 
   useEffect(() => {
     fetchColumns(boardId);
@@ -50,10 +75,9 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     onBackToDashboardRef.current = onBackToDashboard;
   }, [onBackToDashboard]);
 
-  // Establish isolated secure websocket infrastructure gateway
   const socket = useSocket(boardId);
 
-  // Real-time synchronization event broker pipeline loop
+  // Secure real-time WebSocket event broker stream gateway
   useEffect(() => {
     if (!socket) return;
 
@@ -94,15 +118,17 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     });
 
     socket.on('card_updated', (payload) => {
+      if (isLocallyDragging.current) return;
       console.log('[WS_STREAM] Incoming frame payload: card_updated');
       const cardData = payload?.card || payload;
       syncUpdateCard(cardData);
     });
 
     socket.on('card_moved', (payload) => {
+      if (isLocallyDragging.current) return;
       console.log('[WS_STREAM] Incoming frame payload: card_moved');
       const cardData = payload?.card || payload;
-      syncUpdateCard(cardData); // Reuse update mutator for re-positioning
+      syncUpdateCard(cardData);
     });
 
     socket.on('card_deleted', (payload) => {
@@ -126,7 +152,6 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     };
   }, [socket, syncAddColumn, syncUpdateColumn, syncDeleteColumn, syncAddCard, syncUpdateCard, syncDeleteCard]);
 
-  // Swapped browser prompt with local component state trigger
   const handleDeleteBoardClick = () => {
     setIsConfirmOpen(true);
   };
@@ -141,7 +166,6 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     }
   };
 
-  // Executes the real pipeline erasure sequence once verified inside the custom alert window
   const handleExecuteDeleteBoard = async () => {
     try {
       await deleteBoard(boardId);
@@ -164,6 +188,90 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
       setIsAddingColumn(false);
     } catch (err) {
       console.error('Failed to append new lane sequence', err);
+    }
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    isLocallyDragging.current = true;
+
+    const cardId = String(event.active.id);
+    let foundCard: Card | null = null;
+
+    Object.keys(cards).forEach((colId) => {
+      const target = cards[colId].find((c) => c.id === cardId);
+      if (target) foundCard = target;
+    });
+
+    setActiveCard(foundCard);
+  };
+
+  const handleDragOver = (event: any) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const cardId = String(active.id);
+    const overId = String(over.id);
+
+    let activeColumnId: string | null = null;
+    Object.keys(cards).forEach((colId) => {
+      if (cards[colId].some((c) => c.id === cardId)) {
+        activeColumnId = colId;
+      }
+    });
+
+    let overColumnId: string | null = overId;
+    if (!columns.some((col) => col.id === overId)) {
+      Object.keys(cards).forEach((colId) => {
+        if (cards[colId].some((c) => c.id === overId)) {
+          overColumnId = colId;
+        }
+      });
+    }
+
+    // Only update state if card crosses lanes to prevent infinite loop crashes inside the same column
+    if (activeColumnId && overColumnId && activeColumnId !== overColumnId) {
+      moveCard(cardId, overId);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    setActiveCard(null);
+    isLocallyDragging.current = false;
+    if (!over) return;
+
+    const cardId = String(active.id);
+    const targetId = String(over.id);
+
+    let finalColumnId = targetId;
+    if (!cards[targetId]) {
+      Object.keys(cards).forEach((colId) => {
+        if (cards[colId].some((c) => c.id === targetId)) {
+          finalColumnId = colId;
+        }
+      });
+    }
+
+    // Fetch snapshot of current list before client-side mutation updates state
+    const currentList = cards[finalColumnId] || [];
+
+    // Calculate both indexes ahead of time to maintain accurate intra-column repositioning positions
+    let targetIndex = currentList.findIndex((c) => c.id === targetId);
+    const currentIndex = currentList.findIndex((c) => c.id === cardId);
+
+    if (targetIndex === -1) {
+      targetIndex = currentList.length;
+    }
+
+    const finalPosition = String(targetIndex + 1);
+
+    moveCard(cardId, targetId);
+
+    try {
+      await persistCardPosition(cardId, finalColumnId, finalPosition);
+    } catch (err) {
+      console.error('Database sync deferred:', err);
     }
   };
 
@@ -209,58 +317,67 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
       </header>
 
       {/* HORIZONTAL BOARD GRID RUNTIME PANELS */}
-      <main className="flex-1 p-4 md:p-6 overflow-x-auto flex items-start gap-4 custom-scrollbar select-none">
-        {columns.map((column) => (
-          <ColumnContainer key={column.id} column={column} />
-        ))}
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+        <main className="flex-1 p-4 md:p-6 overflow-x-auto flex items-start gap-4 custom-scrollbar select-none">
+          {columns.map((column) => (
+            <ColumnContainer key={column.id} column={column} />
+          ))}
 
-        {/* COMPONENT CREATION FOR NEW COLUMNS */}
-        <div className="w-72 sm:w-80 shrink-0">
-          {isAddingColumn ? (
-            <form
-              onSubmit={handleCreateColumn}
-              className="bg-slate-900 border border-emerald-500/20 p-4 rounded space-y-3 shadow-lg"
-            >
-              <div>
-                <label className="block text-[10px] text-slate-500 uppercase tracking-widest mb-1 font-bold">
-                  Column Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., In Progress"
-                  value={newColumnName}
-                  onChange={(e) => setNewColumnName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
-                  autoFocus
-                />
-              </div>
-              <div className="flex items-center gap-2 justify-end text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => setIsAddingColumn(false)}
-                  className="text-slate-500 hover:text-slate-400 bg-transparent border-none cursor-pointer px-2 py-1 uppercase"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-3 py-1 rounded cursor-pointer transition-colors uppercase flex items-center gap-1"
-                  disabled={!newColumnName.trim()}
-                >
-                  <Plus size={12} /> Add
-                </button>
-              </div>
-            </form>
-          ) : (
-            <button
-              onClick={() => setIsAddingColumn(true)}
-              className="w-full py-4 rounded border border-dashed border-slate-800 hover:border-emerald-500/20 bg-slate-900/20 hover:bg-slate-900/60 text-xs text-slate-500 hover:text-emerald-400 flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 uppercase tracking-wider"
-            >
-              <LayoutGrid size={14} /> [ Add Column ]
-            </button>
-          )}
-        </div>
-      </main>
+          {/* COMPONENT CREATION FOR NEW COLUMNS */}
+          <div className="w-72 sm:w-80 shrink-0">
+            {isAddingColumn ? (
+              <form
+                onSubmit={handleCreateColumn}
+                className="bg-slate-900 border border-emerald-500/20 p-4 rounded space-y-3 shadow-lg"
+              >
+                <div>
+                  <label className="block text-[10px] text-slate-500 uppercase tracking-widest mb-1 font-bold">
+                    Column Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., In Progress"
+                    value={newColumnName}
+                    onChange={(e) => setNewColumnName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex items-center gap-2 justify-end text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingColumn(false)}
+                    className="text-slate-500 hover:text-slate-400 bg-transparent border-none cursor-pointer px-2 py-1 uppercase"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-3 py-1 rounded cursor-pointer transition-colors uppercase flex items-center gap-1"
+                    disabled={!newColumnName.trim()}
+                  >
+                    <Plus size={12} /> Add
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                onClick={() => setIsAddingColumn(true)}
+                className="w-full py-4 rounded border border-dashed border-slate-800 hover:border-emerald-500/20 bg-slate-900/20 hover:bg-slate-900/60 text-xs text-slate-500 hover:text-emerald-400 flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 uppercase tracking-wider"
+              >
+                <LayoutGrid size={14} /> [ Add Column ]
+              </button>
+            )}
+          </div>
+        </main>
+        <DragOverlay dropAnimation={{ duration: 200, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
+          {activeCard ? (
+            <div className="opacity-80 scale-105 rotate-1 transform transition-transform cursor-grabbing w-72 sm:w-80">
+              <CardItem card={activeCard} isOverlay />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
       <ConfirmModal
         isOpen={isConfirmOpen}
         title="Delete Board"
