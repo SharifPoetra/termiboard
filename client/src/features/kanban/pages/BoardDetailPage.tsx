@@ -11,6 +11,7 @@ import { ArrowLeft, Plus, Terminal, LayoutGrid, Edit2, Trash2 } from 'lucide-rea
 import {
   DndContext,
   DragStartEvent,
+  DragOverEvent,
   DragEndEvent,
   DragOverlay,
   PointerSensor,
@@ -57,7 +58,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
 
   // Isolate native clicks and text selections from mobile/pointer panning gestures
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
   );
 
@@ -205,7 +206,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     setActiveCard(foundCard);
   };
 
-  const handleDragOver = (event: any) => {
+  const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
     if (!over) return;
 
@@ -244,6 +245,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     const cardId = String(active.id);
     const targetId = String(over.id);
 
+    // Resolve the target column ID whether dropped over a column area or a card object
     let finalColumnId = targetId;
     if (!cards[targetId]) {
       Object.keys(cards).forEach((colId) => {
@@ -253,22 +255,20 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
       });
     }
 
-    // Fetch snapshot of current list before client-side mutation updates state
-    const currentList = cards[finalColumnId] || [];
-
-    // Calculate both indexes ahead of time to maintain accurate intra-column repositioning positions
-    let targetIndex = currentList.findIndex((c) => c.id === targetId);
-    const currentIndex = currentList.findIndex((c) => c.id === cardId);
-
-    if (targetIndex === -1) {
-      targetIndex = currentList.length;
-    }
-
-    const finalPosition = String(targetIndex + 1);
-
+    // Always trigger local mutation to sync layout states first
     moveCard(cardId, targetId);
 
+    // Fetch snapshot of the freshly mutated track directly from state
+    const currentList = useBoardStore.getState().cards[finalColumnId] || [];
+
+    // Locate the exact physical placement index where the card ended up
+    const finalIndex = currentList.findIndex((c) => c.id === cardId);
+
+    // Fallback to end of lane if somehow index parsing evaluates to -1
+    const finalPosition = String(finalIndex !== -1 ? finalIndex + 1 : currentList.length);
+
     try {
+      console.log(finalPosition);
       await persistCardPosition(cardId, finalColumnId, finalPosition);
     } catch (err) {
       console.error('Database sync deferred:', err);

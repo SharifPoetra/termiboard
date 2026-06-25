@@ -91,36 +91,93 @@ export const updateCardHandler = async (request: FastifyRequest, reply: FastifyR
   const { db, io } = request.server;
 
   try {
-    const currentCard = await db.select().from(cards).where(eq(cards.id, id));
-    if (currentCard.length === 0) {
+    // Retrieve card data before updating
+    const currentCardResult = await db.select().from(cards).where(eq(cards.id, id));
+    if (currentCardResult.length === 0) {
       return reply.status(404).send({ status: 'fail', message: 'Card not found' });
     }
-
+    const currentCard = currentCardResult[0];
     const boardId = (request as any).boardId;
 
-    // Update the card data
-    const updatedCards = await db
-      .update(cards)
-      .set({
-        columnId: columnId ?? undefined,
-        title: title ?? undefined,
-        content: content ?? undefined,
-        position: position ?? undefined,
-      })
-      .where(eq(cards.id, id))
-      .returning();
+    let targetColumnId = columnId || currentCard.columnId;
+    let updatedCardData = currentCard;
 
-    // BROADCAST EVENT: Notify that a card is moved/changed
-    if (columnId || position) {
-      io.to(boardId).emit('card_moved', updatedCards[0]);
+    // If there is a POSITION or COLUMNS change, run a full re-indexing logic
+    if (position !== undefined || columnId !== undefined) {
+      const targetPos = position !== undefined ? parseInt(String(position), 10) : 1;
+
+      // Take all the cards in the target column (except the card currently being shifted)
+      const existingCards = await db.select().from(cards).where(eq(cards.columnId, targetColumnId));
+
+      const filteredCards = existingCards
+        .filter((c) => c.id !== id)
+        .sort((a, b) => parseInt(a.position, 10) - parseInt(b.position, 10));
+
+      // Insert the currently shifted card into its new position (index)
+      const insertIndex = Math.max(0, targetPos - 1);
+      filteredCards.splice(insertIndex, 0, {
+        ...currentCard,
+        columnId: targetColumnId,
+      });
+
+      // Perform a batch update to the database to ensure a clean position (1, 2, 3, etc.) without duplicates
+      await db.transaction(async (tx) => {
+        for (const [index, item] of filteredCards.entries()) {
+          const newPosStr = String(index + 1);
+
+          // If this is the card being shifted, also update the title & content if there is any data submission
+          const updatePayload: any = {
+            columnId: targetColumnId,
+            position: newPosStr,
+          };
+          if (item.id === id) {
+            if (title !== undefined) updatePayload.title = title;
+            if (content !== undefined) updatePayload.content = content;
+          }
+
+          const res = await tx.update(cards).set(updatePayload).where(eq(cards.id, item.id)).returning();
+
+          if (item.id === id) {
+            updatedCardData = res[0];
+          }
+        }
+
+        // If the card moves from another column, clean & rearrange the original column as well so there are no holes in the sequence
+        if (columnId && columnId !== currentCard.columnId) {
+          const rawSourceCards = await tx.select().from(cards).where(eq(cards.columnId, currentCard.columnId));
+          const sourceCards = rawSourceCards.sort((a, b) => parseInt(a.position, 10) - parseInt(b.position, 10));
+
+          for (const [index, cardItem] of sourceCards.entries()) {
+            await tx
+              .update(cards)
+              .set({ position: String(index + 1) })
+              .where(eq(cards.id, cardItem.id));
+          }
+        }
+      });
+
+      // BROADCAST EVENT: Notify that a card is moved
+      io.to(boardId).emit('card_moved', updatedCardData);
     } else {
-      io.to(boardId).emit('card_updated', updatedCards[0]);
+      // If only change the text content (not shifting the position/column)
+      const res = await db
+        .update(cards)
+        .set({
+          title: title ?? undefined,
+          content: content ?? undefined,
+        })
+        .where(eq(cards.id, id))
+        .returning();
+
+      updatedCardData = res[0];
+      // BROADCAST EVENT: Notify that a card is updated
+      io.to(boardId).emit('card_updated', updatedCardData);
     }
 
     return reply.status(200).send({
       status: 'success',
       message: 'Card updated successfully',
-      data: { card: updatedCards[0] },
+      data: { card: updatedCardData },
     });
   } catch (err: any) {
     request.server.log.error(err, 'Card update failed');
