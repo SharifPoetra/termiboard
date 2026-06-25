@@ -268,7 +268,6 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     const finalPosition = String(finalIndex !== -1 ? finalIndex + 1 : currentList.length);
 
     try {
-      console.log(finalPosition);
       await persistCardPosition(cardId, finalColumnId, finalPosition);
     } catch (err) {
       console.error('Database sync deferred:', err);
