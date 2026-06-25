@@ -10,6 +10,26 @@ interface AuthActions {
   clearError: () => void;
 }
 
+// Helper function to non-destructively decode JWT expiration time
+const isTokenExpired = (token: string): boolean => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      window
+        .atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(''),
+    );
+    const { exp } = JSON.parse(jsonPayload);
+    // Convert 'exp' seconds timestamp into milliseconds and compare with current time
+    return Date.now() >= exp * 1000;
+  } catch {
+    return true; // Assume expired if token structure is corrupted
+  }
+};
+
 export const useAuthStore = create<AuthState & AuthActions>((set) => ({
   // Initial State
   user: null,
@@ -74,12 +94,12 @@ export const useAuthStore = create<AuthState & AuthActions>((set) => ({
     });
   },
 
-  // Synchronize login status when browser is refreshed
+  // Synchronize and validate login status when browser triggers an initial boot or refresh
   initializeAuth: () => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
 
-    if (!token || !savedUser) {
+    if (!token || !savedUser || isTokenExpired(token)) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       set({ isLoading: false, isAuthenticated: false, user: null, token: null });
