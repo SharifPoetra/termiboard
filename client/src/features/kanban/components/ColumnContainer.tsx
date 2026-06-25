@@ -4,7 +4,7 @@ import { useBoardStore } from '../../../store/boardStore';
 import { CardItem } from './CardItem';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { Plus, PlusCircle, Trash2 } from 'lucide-react';
-import { useDroppable } from '@dnd-kit/core';
+import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
 interface ColumnContainerProps {
@@ -26,7 +26,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   // dnd-kit droppable connection to make this column container targetable by dragged items
-  const { setNodeRef } = useDroppable({
+  const { setNodeRef } = useSortable({
     id: column.id,
   });
 
