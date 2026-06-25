@@ -11,6 +11,7 @@ import { ArrowLeft, Plus, Terminal, LayoutGrid, Edit2, Trash2 } from 'lucide-rea
 import {
   DndContext,
   DragStartEvent,
+  DragOverEvent,
   DragEndEvent,
   DragOverlay,
   PointerSensor,
@@ -57,7 +58,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
 
   // Isolate native clicks and text selections from mobile/pointer panning gestures
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
   );
 
@@ -205,7 +206,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     setActiveCard(foundCard);
   };
 
-  const handleDragOver = (event: any) => {
+  const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
     if (!over) return;
 
@@ -244,6 +245,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     const cardId = String(active.id);
     const targetId = String(over.id);
 
+    // Resolve the target column ID whether dropped over a column area or a card object
     let finalColumnId = targetId;
     if (!cards[targetId]) {
       Object.keys(cards).forEach((colId) => {
@@ -262,6 +264,12 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
 
     if (targetIndex === -1) {
       targetIndex = currentList.length;
+    } else {
+      // Adjust destination index if dragging downwards within the same column array track
+      const isSameColumn = currentIndex !== -1;
+      if (isSameColumn && currentIndex < targetIndex) {
+        targetIndex = targetIndex - 1;
+      }
     }
 
     const finalPosition = String(targetIndex + 1);
