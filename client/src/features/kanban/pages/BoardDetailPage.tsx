@@ -272,7 +272,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
       }
     }
 
-    const finalPosition = String(targetIndex + 1);
+    const finalPosition = currentList.length === 0 ? '1' : String(targetIndex + 1);
 
     moveCard(cardId, targetId);
 
