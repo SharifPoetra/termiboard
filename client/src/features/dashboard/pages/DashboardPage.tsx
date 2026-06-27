@@ -18,7 +18,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
   const { user, logout } = useAuthStore();
   const { boards, fetchBoards, createBoard, updateBoard, deleteBoard, isLoading, error } = useBoardStore();
 
-  const { invitations, addInvitation, acceptInvitation, rejectInvitation } = useNotificationStore();
+  const { invitations, addInvitation, acceptInvitation, rejectInvitation, fetchPendingInvitations } =
+    useNotificationStore();
   const [actionLoading, setActionLoading] = useState(false);
 
   const [newBoardName, setNewBoardName] = useState('');
@@ -48,6 +49,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
 
   useEffect(() => {
     fetchBoards();
+    fetchPendingInvitations();
     if (sessionStorage.getItem('TERMINAL_EVAC_SIGNAL') === 'true') {
       setIsEvacuated(true);
       sessionStorage.removeItem('TERMINAL_EVAC_SIGNAL');

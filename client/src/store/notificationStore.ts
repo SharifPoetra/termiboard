@@ -21,7 +21,7 @@ interface NotificationActions {
   addInvitation: (invitation: Invitation) => void;
   acceptInvitation: (boardId: string) => Promise<void>;
   rejectInvitation: (boardId: string) => Promise<void>;
-  // Pending: need endpoint to fetch pending invitations upon initial application boot
+  // Invoked to fetch pending invitations upon initial application boot or refresh
   fetchPendingInvitations: () => Promise<void>;
 }
 
@@ -65,15 +65,21 @@ export const useNotificationStore = create<NotificationState & NotificationActio
     }
   },
 
-  // Invoked during application startup sequence to reconcile missing pending invite arrays
+  // Invoked during application startup sequence to reconcile missing pending invite arrays from database
   fetchPendingInvitations: async () => {
-    // TODO: Make an endpoint to fetch pending invitations
+    set({ isLoading: true });
     try {
-      // Example endpoint mapping parameters: GET /api/boards/invitations/pending
-      // const response = await axiosInstance.get('/boards/invitations/pending');
-      // set({ invitations: response.data.data.invitations });
+      // GET /api/boards/invite/pending
+      const response = await axiosInstance.get('/boards/invite/pending');
+
+      // Hydrate local state array with persistence layer database records
+      set({
+        invitations: response.data.data.invitations || [],
+        isLoading: false,
+      });
     } catch (err) {
-      console.error('Failed to fetch pending invitations', err);
+      console.error('Failed to fetch pending invitations from database matrix', err);
+      set({ isLoading: false });
     }
   },
 }));
