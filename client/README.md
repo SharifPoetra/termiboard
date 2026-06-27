@@ -1,32 +1,54 @@
 # TermiBoard Client Workspace 🌐
 
-This directory houses the frontend user interface for **TermiBoard**. It communicates with the backend server seamlessly using RESTful API endpoints for persistent state changes and WebSockets (`Socket.io`) for reactive, real-time board updates.
+This directory houses the frontend user interface for **TermiBoard**, engineered with a retro-futuristic hacker/terminal aesthetic. It communicates with the backend server seamlessly using RESTful API endpoints for persistent state changes and WebSockets (`Socket.io`) for reactive, multi-user real-time board sync.
 
-## 🧪 Current State: Real-Time Diagnostic Dashboard
-Right now, this workspace contains a dedicated **WebSocket Diagnostic System** (`test-ws.html`) designed to test real-time collaboration protocols before building out the full UI layout.
+## 🚀 Implemented Features
 
-### Features covered in current diagnostics:
-* 🚪 **Room Joining:** Securely bounds socket stream to a specific board channel (`join_board`).
-* 🏛️ **Column Listeners:** Live logs for `column_created`, `column_updated`, and `column_deleted`.
-* 🃏 **Card Listeners:** Live logs for `card_created`, `card_moved`, `card_updated`, and `card_deleted`.
+### 🔐 1. Authentication Matrix
+
+- **Secure Session Gatekeeper:** Full login and registration system.
+- **JWT Authorization Interceptor:** Automated global token injection for every outgoing request via Axios interceptors.
+- **Persistence Layer Store:** Synchronized global auth state via Zustand (`authStore.ts`).
+
+### 📊 2. Operational Control Dashboard (`DashboardPage`)
+
+- **Project Deployment:** Create, update, and permanently delete project boards.
+- **Integrated Real-Time Notification Center:** \* A reactive `Bell` notification dropdown embedded directly into the header navigation bar.
+  - Dynamic red notification count badge showing outstanding workspace invitations.
+  - Real-time `invitation_received` WebSockets listener + database fallback sync upon application startup to survive page refresh.
+  - Instant `[ ACCEPT ]` and `[ REJECT ]` handling for incoming board collaboration pipelines.
+
+### 📋 3. Core Kanban Workspace (`BoardDetailPage`)
+
+- **Multi-Lane Board Grid:** Render structured workflow status tracks using columns and task cards.
+- **Drag-and-Drop Runtime Matrix:** Powered by `@dnd-kit/core` with custom `Pointer` and `Touch` sensors to ensure fluid interaction across both desktop and mobile layouts.
+- **Responsive Control Interface:**
+  - **Desktop Mode:** Dedicated inline action arrays for immediate board edits, board destruction, and collaborator invites.
+  - **Mobile Matrix View:** Automatic responsive compression that combines advanced board operations (Invite, Edit, Delete) into a sleek `MoreVertical` dropdown overlay.
+
+### 🔌 4. WebSocket Synchronization Gateway (`useSocket`)
+
+- **Live Stream Reconciliation:** Listens to server-side broadcasts to reflect global changes instantaneously without triggering page reloads:
+  - `board_updated` / `board_deleted` (with emergency redirection evacuation flags).
+  - `column_created` / `column_updated` / `column_deleted`.
+  - `card_created` / `card_updated` / `card_moved` / `card_deleted`.
+- **Local Echo Supression:** Implements reference guards (`isLocallyDragging`) to suppress infinite UI re-render cycles while dragging local cards.
 
 ---
 
-## 🛠️ How to Launch the Diagnostics
+## 🛠️ Tech Stack & Dependencies
 
-1. Ensure the backend server is running up at `http://127.0.0.1:3001`.
-2. Open the `test-ws.html` file using a local static browser server or directly via terminal preview tools of your choice.
-3. Authenticate with a valid JWT token generated from the REST API to monitor incoming event payloads dynamically.
+- **Core UI Engine:** React 18+ (TypeScript)
+- **Style Framework:** Tailwind CSS (with slate-950 terminal matrix theme)
+- **State Management:** Zustand (Lightweight centralized hooks)
+- **Drag & Drop Layer:** `@dnd-kit/core` + `@dnd-kit/sortable`
+- **Network Client:** Axios (REST API calls) & `socket.io-client` (Real-Time streams)
+- **Icon Library:** `lucide-react`
 
 ---
 
-## 🗺️ Frontend Roadmap
-The target UI will eventually be engineered with modern reactive frameworks, aiming for:
-1. **State Management:** Optimistic UI updates to render dragging movements instantly.
-2. **Interactive Board Layout:** Drag-and-drop support for switching card positions across columns effortlessly.
-3. **Collaborative Presence:** Visual indicators showing other active members currently viewing the board room.
+### 📂 Current and Planned Structures
 
-### 📂 Planned structures
 ```
 client/src/
 ├── assets/             # Global static assets (images, favicon, global CSS)
@@ -53,15 +75,16 @@ client/src/
 │       └── types/      # kanban.types.ts
 │
 ├── hooks/              # Global Custom Hooks
-│   ├── useSocket.ts    # Initialization & main gateway for Socket.io-client
-│   └── useAuth.ts      # Quick bridge to check login status in router
+│   └── useSocket.ts    # Initialization & main gateway for Socket.io-client
+│
 │
 ├── lib/                # Third-party Configuration
 │   └── axios.ts        # Global Axios instance (+ interceptor to inject JWT Token)
 │
 ├── store/              # Centralized State Management (Zustand)
 │   ├── authStore.ts    # Manages logged-in user data & token
-│   └── boardStore.ts   # Manages realtime Board, Column, & Card data
+│   ├── boardStore.ts   # Manages realtime Board, Column, & Card data
+│   └── notificationStore.ts # Pending invitations and notification state
 │
 ├── App.tsx             # Router setup (Login Gatekeeper & Private Route)
 └── main.tsx            # React application entry point
