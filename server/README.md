@@ -202,6 +202,28 @@ All requests must set the header `Content-Type: application/json`. Protected end
 ```
  * **Triggered Side Effect**: Dispatches an out-of-band WebSocket event `invitation_received` securely to the specific target user's namespace tunnel (`user_<userId>`).
 
+#### 🔹 Fetch Pending Invitations for Authenticated User
+ * **Endpoint**: `GET /api/boards/invite/pending`
+ * **Auth Required**: Yes (Must be an authenticated user to fetch their own pending data)
+ * **Success Response (200 OK)**:
+```json
+{
+  "status": "success",
+  "data": {
+    "invitations": [
+      {
+        "id": "91a14cc5-9922-4412-bd73-bb66ff82cba1",
+        "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
+        "userId": "33a9b122-8d77-44a3-bc12-990ffde111ab",
+        "role": "member",
+        "status": "pending",
+        "createdAt": "2026-06-13T08:57:42.000Z"
+      }
+    ]
+  }
+}
+```
+
 #### 🔹 Accept Pending Board Invitation
  * **Endpoint**: `POST /api/boards/invite/accept`
  * **Auth Required**: Yes (Must be the user bound to the pending invitation)

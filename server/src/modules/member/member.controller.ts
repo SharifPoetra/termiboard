@@ -109,10 +109,36 @@ export const addMemberHandler = async (request: FastifyRequest, reply: FastifyRe
   }
 };
 
+export const getPendingInvitationsHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+  const { db } = request.server;
+  const userId = (request.user as any).id;
+
+  try {
+    // Fetch all pending invitations where the target is the currently authenticated user
+    const pendingInvitations = await db
+      .select()
+      .from(boardMembers)
+      .where(and(eq(boardMembers.userId, userId), eq(boardMembers.status, 'pending')));
+
+    return reply.status(200).send({
+      status: 'success',
+      data: {
+        invitations: pendingInvitations,
+      },
+    });
+  } catch (err: any) {
+    request.server.log.error(err, 'Fetch pending invitations failed');
+    return reply.status(500).send({
+      status: 'error',
+      message: 'Internal server error',
+    });
+  }
+};
+
 export const acceptInviteHandler = async (request: FastifyRequest, reply: FastifyReply) => {
   const { boardId } = request.body as ResponseInviteBody;
   const { db, io } = request.server;
-  const userId = (request.user as any).id; // The user accepting the invite
+  const userId = (request.user as any).id;
 
   try {
     const updatedMember = await db
