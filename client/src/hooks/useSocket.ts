@@ -2,12 +2,22 @@ import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../store/authStore';
 
-export const useSocket = (boardId: string | null) => {
+interface UseSocketOptions {
+  boardId?: string | null;
+  subscribeNotifications?: boolean;
+}
+
+export const useSocket = (options?: UseSocketOptions) => {
   const socketRef = useRef<Socket | null>(null);
   const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
+
+  const boardId = options?.boardId;
+  const subscribeNotifications = options?.subscribeNotifications;
 
   useEffect(() => {
-    if (!token || !boardId) return;
+    if (!token) return;
+    if (!boardId && !subscribeNotifications) return;
 
     // Fetch the backend URL dynamically from Vite's environment variables
     const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -21,9 +31,14 @@ export const useSocket = (boardId: string | null) => {
     const socket = socketRef.current;
 
     socket.on('connect', () => {
-      console.log(`[WS] Connected to gateway. Tunneling board: ${boardId}`);
-      // Join isolated workspace channel space mapping this specific board UUID
-      socket.emit('join_board', boardId);
+      if (boardId) {
+        console.log(`[WS] Tunneling board room: ${boardId}`);
+        socket.emit('join_board', boardId);
+      }
+      if (subscribeNotifications && user?.id) {
+        console.log(`[WS] Subscribing to notification tunnel for user: ${user.id}`);
+        socket.emit('subscribe_notifications', user.id);
+      }
     });
 
     socket.on('disconnect', () => {
@@ -40,7 +55,7 @@ export const useSocket = (boardId: string | null) => {
         socket.disconnect();
       }
     };
-  }, [boardId, token]);
+  }, [boardId, subscribeNotifications, token, user?.id]);
 
   return socketRef.current;
 };
