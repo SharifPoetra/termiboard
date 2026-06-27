@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useBoardStore } from '../../../store/boardStore';
 import { useAuthStore } from '../../../store/authStore';
+import { useNotificationStore } from '../../../store/notificationStore';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { AlertModal } from '../../../components/ui/AlertModal';
-import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare, Trash2, Edit2 } from 'lucide-react';
+import { useSocket } from '../../../hooks/useSocket';
+import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare, Trash2, Edit2, Bell } from 'lucide-react';
 import { EditBoardModal } from '../../../components/ui/EditBoardModal';
 
 interface DashboardPageProps {
@@ -16,6 +18,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
   const { user, logout } = useAuthStore();
   const { boards, fetchBoards, createBoard, updateBoard, deleteBoard, isLoading, error } = useBoardStore();
 
+  const { invitations, addInvitation, acceptInvitation, rejectInvitation } = useNotificationStore();
+  const [actionLoading, setActionLoading] = useState(false);
+
   const [newBoardName, setNewBoardName] = useState('');
   const [newBoardDesc, setNewBoardDesc] = useState('');
   const [formError, setFormError] = useState('');
@@ -23,6 +28,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingBoard, setEditingBoard] = useState<{ id: string; name: string; description: string } | null>(null);
+
+  const socket = useSocket({ subscribeNotifications: true });
+
+  useEffect(() => {
+    if (!socket) return;
+
+    // Listen to invitation_received events in real-time
+    socket.on('invitation_received', (payload) => {
+      console.log('[WS_STREAM] Live invitation package arrived:', payload);
+      const inviteData = payload?.data || payload;
+      addInvitation(inviteData);
+    });
+
+    return () => {
+      socket.off('invitation_received');
+    };
+  }, [socket, addInvitation]);
 
   useEffect(() => {
     fetchBoards();
@@ -83,6 +105,29 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
     }
   };
 
+  const handleAccept = async (boardId: string) => {
+    setActionLoading(true);
+    try {
+      await acceptInvitation(boardId);
+      await fetchBoards();
+    } catch (err) {
+      console.error('Failed to accept board sequence:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = async (boardId: string) => {
+    setActionLoading(true);
+    try {
+      await rejectInvitation(boardId);
+    } catch (err) {
+      console.error('Failed to reject board sequence:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-mono flex flex-col selection:bg-emerald-500/30">
       {/* TOP CONTROL NAVIGATION NAVBAR - Ultra Dynamic Flex */}
@@ -108,37 +153,80 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
 
       {/* MAIN LAYOUT */}
       <main className="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-        {/* LEFT PANEL: CREATE BOARD */}
-        <section className="bg-slate-900 border border-slate-800 rounded p-4 md:p-5 h-fit shadow-lg sm:col-span-1">
-          <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
-            <FolderPlus className="text-emerald-400 shrink-0" size={16} />
-            <h2 className="text-[11px] md:text-xs font-bold uppercase tracking-widest text-slate-300">
-              CREATE NEW BOARD
-            </h2>
-          </div>
+        {/* LEFT COMPONENT COLUMN */}
+        <div className="sm:col-span-1 space-y-6">
+          {/* REAL-TIME SYSTEM NOTIFICATIONS (INCOMING INVITATIONS) */}
+          {invitations.length > 0 && (
+            <section className="bg-slate-900 border border-amber-500/30 rounded p-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-200">
+              <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-3">
+                <Bell className="text-amber-400 shrink-0 animate-pulse" size={16} />
+                <h2 className="text-[11px] md:text-xs font-bold uppercase tracking-widest text-amber-400">
+                  SYSTEM NOTIFICATIONS ({invitations.length})
+                </h2>
+              </div>
 
-          <form onSubmit={handleCreateBoard} className="space-y-1">
-            <Input
-              ref={inputRef}
-              label="Board Name"
-              placeholder="e.g., Marketing Campaign"
-              value={newBoardName}
-              onChange={(e) => setNewBoardName(e.target.value)}
-              error={formError || (error ? 'Deployment failed' : undefined)}
-              disabled={isLoading}
-            />
-            <Input
-              label="Description (Optional)"
-              placeholder="Brief summary of this project..."
-              value={newBoardDesc}
-              onChange={(e) => setNewBoardDesc(e.target.value)}
-              disabled={isLoading}
-            />
-            <Button type="submit" isLoading={isLoading} className="mt-2 w-full text-xs py-2.5">
-              Create Project Board
-            </Button>
-          </form>
-        </section>
+              <div className="space-y-3">
+                {invitations.map((inv) => (
+                  <div key={inv.id} className="bg-slate-950 border border-slate-800 p-2.5 rounded text-[11px]">
+                    <p className="text-slate-300 mb-2 leading-relaxed">
+                      &gt; You have been invited to collaborate on board matrix:{' '}
+                      <span className="text-emerald-400 font-bold">#{inv.boardId.substring(0, 8)}</span>
+                    </p>
+
+                    <div className="flex items-center gap-2 justify-end font-bold pt-1.5 border-t border-slate-900">
+                      <button
+                        onClick={() => handleReject(inv.boardId)}
+                        disabled={actionLoading}
+                        className="text-red-400 hover:text-red-300 bg-transparent border-none cursor-pointer px-2 py-0.5 uppercase text-[10px]"
+                      >
+                        [ REJECT ]
+                      </button>
+                      <button
+                        onClick={() => handleAccept(inv.boardId)}
+                        disabled={actionLoading}
+                        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-2.5 py-0.5 rounded cursor-pointer transition-colors uppercase text-[10px]"
+                      >
+                        [ ACCEPT ]
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* PANEL: CREATE BOARD */}
+          <section className="bg-slate-900 border border-slate-800 rounded p-4 md:p-5 h-fit shadow-lg">
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
+              <FolderPlus className="text-emerald-400 shrink-0" size={16} />
+              <h2 className="text-[11px] md:text-xs font-bold uppercase tracking-widest text-slate-300">
+                CREATE NEW BOARD
+              </h2>
+            </div>
+
+            <form onSubmit={handleCreateBoard} className="space-y-1">
+              <Input
+                ref={inputRef}
+                label="Board Name"
+                placeholder="e.g., Marketing Campaign"
+                value={newBoardName}
+                onChange={(e) => setNewBoardName(e.target.value)}
+                error={formError || (error ? 'Deployment failed' : undefined)}
+                disabled={isLoading}
+              />
+              <Input
+                label="Description (Optional)"
+                placeholder="Brief summary of this project..."
+                value={newBoardDesc}
+                onChange={(e) => setNewBoardDesc(e.target.value)}
+                disabled={isLoading}
+              />
+              <Button type="submit" isLoading={isLoading} className="mt-2 w-full text-xs py-2.5">
+                Create Project Board
+              </Button>
+            </form>
+          </section>
+        </div>
 
         {/* RIGHT PANEL: LIST BOARDS */}
         <section className="sm:col-span-2 lg:col-span-3 flex flex-col gap-4">
@@ -210,6 +298,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           )}
         </section>
       </main>
+
       <EditBoardModal
         isOpen={editModalOpen}
         onClose={() => {
@@ -221,6 +310,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           if (editingBoard) await updateBoard(editingBoard.id, { name, description });
         }}
       />
+
       <ConfirmModal
         isOpen={deleteModalOpen}
         title="Delete Project Board"

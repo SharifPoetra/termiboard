@@ -4,9 +4,10 @@ import { useSocket } from '../../../hooks/useSocket';
 import { ColumnContainer } from '../components/ColumnContainer';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { EditBoardModal } from '../../../components/ui/EditBoardModal';
+import { InviteUserModal } from '../../../components/ui/InviteUserModal';
 import { CardItem } from '../components/CardItem';
 import { Card } from '../types/kanban.types';
-import { ArrowLeft, Plus, Terminal, LayoutGrid, Edit2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Terminal, LayoutGrid, Edit2, Trash2, UserPlus } from 'lucide-react';
 
 import {
   DndContext,
@@ -47,6 +48,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     syncDeleteCard,
   } = useBoardStore();
 
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
@@ -76,7 +78,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     onBackToDashboardRef.current = onBackToDashboard;
   }, [onBackToDashboard]);
 
-  const socket = useSocket(boardId);
+  const socket = useSocket({ boardId });
 
   // Secure real-time WebSocket event broker stream gateway
   useEffect(() => {
@@ -308,6 +310,14 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
         </div>
 
         <div className="flex items-center gap-3">
+          {/* INVITE BUTTON */}
+          <button
+            onClick={() => setInviteModalOpen(true)}
+            className="bg-slate-950 border border-slate-800 hover:border-emerald-500/40 text-slate-400 hover:text-emerald-400 px-2.5 py-1 rounded text-[10px] md:text-xs flex items-center gap-1.5 transition-all duration-150 cursor-pointer uppercase font-bold"
+          >
+            <UserPlus size={12} />
+            <span>Invite</span>
+          </button>
           <div className="text-[10px] text-emerald-400 bg-slate-950 border border-emerald-500/20 px-2 py-0.5 rounded flex items-center gap-1.5 shadow-sm shrink-0">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
             <span>LIVE SYNC</span>
@@ -390,6 +400,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
         initialData={currentBoard ? { name: currentBoard.name, description: currentBoard.description || '' } : null}
         onConfirm={handleExecuteUpdateBoard}
       />
+      <InviteUserModal isOpen={inviteModalOpen} onClose={() => setInviteModalOpen(false)} boardId={boardId} />
     </div>
   );
 };
