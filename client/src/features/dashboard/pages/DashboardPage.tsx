@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useBoardStore } from '../../../store/boardStore';
 import { useAuthStore } from '../../../store/authStore';
 import { useNotificationStore } from '../../../store/notificationStore';
@@ -30,6 +30,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingBoard, setEditingBoard] = useState<{ id: string; name: string; description: string } | null>(null);
 
+  // State and ref tracking for the top notification dropdown window matrix
+  const [notiDropdownOpen, setNotiDropdownOpen] = useState(false);
+  const notiDropdownRef = useRef<HTMLDivElement>(null);
+
   const socket = useSocket({ subscribeNotifications: true });
 
   useEffect(() => {
@@ -55,6 +59,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
       sessionStorage.removeItem('TERMINAL_EVAC_SIGNAL');
     }
   }, [fetchBoards]);
+
+  // Intercept click signals outside the viewport boundaries to close the notification panel
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notiDropdownRef.current && !notiDropdownRef.current.contains(event.target as Node)) {
+        setNotiDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const inputRef = React.useRef<HTMLInputElement>(null);
   const handleFocusInput = () => {
@@ -132,7 +147,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-mono flex flex-col selection:bg-emerald-500/30">
-      {/* TOP CONTROL NAVIGATION NAVBAR - Ultra Dynamic Flex */}
+      {/* TOP CONTROL NAVIGATION NAVBAR */}
       <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-6 py-3 flex flex-row items-center justify-between shadow-md gap-4">
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
           <Terminal className="text-emerald-400 animate-pulse shrink-0" size={18} />
@@ -144,59 +159,84 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           </div>
         </div>
 
-        <button
-          onClick={logout}
-          className="text-[11px] md:text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 flex items-center gap-1.5 bg-transparent border-none cursor-pointer transition-colors shrink-0"
-        >
-          <LogOut size={13} /> <span className="hidden xs:inline">[ LOGOUT ]</span>
-          <span className="xs:hidden">[ EXIT ]</span>
-        </button>
+        {/* COMBINED CONTROL ACTIONS ZONE: Wraps notification stream anchor and session exit */}
+        <div className="flex items-center gap-4 shrink-0">
+          {/* BELL CONTAINER HOOK: Houses absolute counter tag and dropdown viewport */}
+          <div className="relative" ref={notiDropdownRef}>
+            <button
+              onClick={() => setNotiDropdownOpen(!notiDropdownOpen)}
+              className="relative p-1.5 rounded bg-slate-950 border border-slate-800 text-slate-400 hover:text-amber-400 hover:border-amber-500/30 transition-colors cursor-pointer"
+              title="System Notifications"
+            >
+              <Bell size={14} className={invitations.length > 0 ? 'animate-bounce' : ''} />
+
+              {/* RED BADGE COUNT INDICATOR: Only spawns if active invitations length > 0 */}
+              {invitations.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white font-bold text-[9px] h-4 w-4 rounded-full flex items-center justify-center border border-slate-900 animate-in zoom-in-50">
+                  {invitations.length}
+                </span>
+              )}
+            </button>
+
+            {/* FLOATING SYSTEM NOTIFICATIONS DROPDOWN LAYER */}
+            {notiDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-72 xs:w-80 bg-slate-900 border border-amber-500/30 rounded p-4 shadow-xl z-50 text-left animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-3">
+                  <Bell className="text-amber-400 shrink-0" size={14} />
+                  <h2 className="text-[11px] font-bold uppercase tracking-widest text-amber-400">
+                    SYSTEM NOTIFICATIONS ({invitations.length})
+                  </h2>
+                </div>
+
+                {invitations.length === 0 ? (
+                  <p className="text-[10px] text-slate-500 py-2 text-center">&gt; No pending notifications.</p>
+                ) : (
+                  <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                    {invitations.map((inv) => (
+                      <div key={inv.id} className="bg-slate-950 border border-slate-800 p-2.5 rounded text-[11px]">
+                        <p className="text-slate-300 mb-2 leading-relaxed">
+                          &gt; You have been invited to collaborate on board:{' '}
+                          <span className="text-emerald-400 font-bold">#{inv.boardId.substring(0, 8)}</span>
+                        </p>
+
+                        <div className="flex items-center gap-2 justify-end font-bold pt-1.5 border-t border-slate-900">
+                          <button
+                            onClick={() => handleReject(inv.boardId)}
+                            disabled={actionLoading}
+                            className="text-red-400 hover:text-red-300 bg-transparent border-none cursor-pointer px-2 py-0.5 uppercase text-[10px]"
+                          >
+                            [ REJECT ]
+                          </button>
+                          <button
+                            onClick={() => handleAccept(inv.boardId)}
+                            disabled={actionLoading}
+                            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-2.5 py-0.5 rounded cursor-pointer transition-colors uppercase text-[10px]"
+                          >
+                            [ ACCEPT ]
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={logout}
+            className="text-[11px] md:text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 flex items-center gap-1.5 bg-transparent border-none cursor-pointer transition-colors"
+          >
+            <LogOut size={13} /> <span className="hidden xs:inline">[ LOGOUT ]</span>
+            <span className="xs:hidden">[ EXIT ]</span>
+          </button>
+        </div>
       </header>
 
       {/* MAIN LAYOUT */}
       <main className="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6">
         {/* LEFT COMPONENT COLUMN */}
         <div className="sm:col-span-1 space-y-6">
-          {/* REAL-TIME SYSTEM NOTIFICATIONS (INCOMING INVITATIONS) */}
-          {invitations.length > 0 && (
-            <section className="bg-slate-900 border border-amber-500/30 rounded p-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-200">
-              <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-3">
-                <Bell className="text-amber-400 shrink-0 animate-pulse" size={16} />
-                <h2 className="text-[11px] md:text-xs font-bold uppercase tracking-widest text-amber-400">
-                  SYSTEM NOTIFICATIONS ({invitations.length})
-                </h2>
-              </div>
-
-              <div className="space-y-3">
-                {invitations.map((inv) => (
-                  <div key={inv.id} className="bg-slate-950 border border-slate-800 p-2.5 rounded text-[11px]">
-                    <p className="text-slate-300 mb-2 leading-relaxed">
-                      &gt; You have been invited to collaborate on board matrix:{' '}
-                      <span className="text-emerald-400 font-bold">#{inv.boardId.substring(0, 8)}</span>
-                    </p>
-
-                    <div className="flex items-center gap-2 justify-end font-bold pt-1.5 border-t border-slate-900">
-                      <button
-                        onClick={() => handleReject(inv.boardId)}
-                        disabled={actionLoading}
-                        className="text-red-400 hover:text-red-300 bg-transparent border-none cursor-pointer px-2 py-0.5 uppercase text-[10px]"
-                      >
-                        [ REJECT ]
-                      </button>
-                      <button
-                        onClick={() => handleAccept(inv.boardId)}
-                        disabled={actionLoading}
-                        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-2.5 py-0.5 rounded cursor-pointer transition-colors uppercase text-[10px]"
-                      >
-                        [ ACCEPT ]
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
           {/* PANEL: CREATE BOARD */}
           <section className="bg-slate-900 border border-slate-800 rounded p-4 md:p-5 h-fit shadow-lg">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
