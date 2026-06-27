@@ -7,7 +7,7 @@ import { EditBoardModal } from '../../../components/ui/EditBoardModal';
 import { InviteUserModal } from '../../../components/ui/InviteUserModal';
 import { CardItem } from '../components/CardItem';
 import { Card } from '../types/kanban.types';
-import { ArrowLeft, Plus, Terminal, LayoutGrid, Edit2, Trash2, UserPlus } from 'lucide-react';
+import { ArrowLeft, Plus, Terminal, LayoutGrid, Edit2, Trash2, UserPlus, MoreVertical } from 'lucide-react';
 
 import {
   DndContext,
@@ -55,6 +55,10 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [activeCard, setActiveCard] = useState<Card | null>(null);
 
+  // State and ref tracking for the mobile action dropdown
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   // Guard flag to temporarily ignore incoming echo reflections from WS during local dragging
   const isLocallyDragging = useRef(false);
 
@@ -77,6 +81,17 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
   useEffect(() => {
     onBackToDashboardRef.current = onBackToDashboard;
   }, [onBackToDashboard]);
+
+  // Intercept click signals outside the viewport boundaries to close the dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const socket = useSocket({ boardId });
 
@@ -157,6 +172,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
 
   const handleDeleteBoardClick = () => {
     setIsConfirmOpen(true);
+    setDropdownOpen(false); // Close dropdown upon triggering modal
   };
 
   const handleExecuteUpdateBoard = async (name: string, description: string) => {
@@ -292,16 +308,18 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
             <span className="text-xs md:text-sm font-bold text-slate-200 truncate tracking-wide flex items-center gap-2">
               BOARD // {currentBoard ? currentBoard.name : `${boardId.substring(0, 8)}...`}
             </span>
+
+            {/* HIDDEN ON MOBILE: Desktop individual button array actions */}
             <button
               onClick={() => setEditModalOpen(true)}
-              className="text-slate-500 hover:text-cyan-400 bg-transparent border-none p-0.5 cursor-pointer transition-colors"
+              className="hidden md:inline-block text-slate-500 hover:text-cyan-400 bg-transparent border-none p-0.5 cursor-pointer transition-colors"
               title="Edit Board"
             >
               <Edit2 size={11} />
             </button>
             <button
               onClick={handleDeleteBoardClick}
-              className="text-slate-500 hover:text-cyan-400 bg-transparent border-none p-0.5 cursor-pointer transition-colors"
+              className="hidden md:inline-block text-slate-500 hover:text-cyan-400 bg-transparent border-none p-0.5 cursor-pointer transition-colors"
               title="Delete Board"
             >
               <Trash2 size={11} />
@@ -310,17 +328,60 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
         </div>
 
         <div className="flex items-center gap-3">
-          {/* INVITE BUTTON */}
+          {/* HIDDEN ON MOBILE: Desktop invite collaborator trigger */}
           <button
             onClick={() => setInviteModalOpen(true)}
-            className="bg-slate-950 border border-slate-800 hover:border-emerald-500/40 text-slate-400 hover:text-emerald-400 px-2.5 py-1 rounded text-[10px] md:text-xs flex items-center gap-1.5 transition-all duration-150 cursor-pointer uppercase font-bold"
+            className="hidden md:flex bg-slate-950 border border-slate-800 hover:border-emerald-500/40 text-slate-400 hover:text-emerald-400 px-2.5 py-1 rounded text-xs items-center gap-1.5 transition-all duration-150 cursor-pointer uppercase font-bold"
           >
             <UserPlus size={12} />
             <span>Invite</span>
           </button>
+
           <div className="text-[10px] text-emerald-400 bg-slate-950 border border-emerald-500/20 px-2 py-0.5 rounded flex items-center gap-1.5 shadow-sm shrink-0">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
             <span>LIVE SYNC</span>
+          </div>
+
+          {/* MOBILE ACTION DROPDOWN: Aggregates Invite, Edit, and Delete in responsive viewports */}
+          <div className="relative md:hidden" ref={dropdownRef}>
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="p-1.5 rounded bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+            >
+              <MoreVertical size={14} />
+            </button>
+
+            {dropdownOpen && (
+              <div className="absolute right-0 mt-1.5 w-40 bg-slate-900 border border-slate-800 rounded shadow-xl z-50 overflow-hidden text-[11px]">
+                <button
+                  onClick={() => {
+                    setInviteModalOpen(true);
+                    setDropdownOpen(false);
+                  }}
+                  className="w-full px-3 py-2.5 text-left text-slate-300 hover:text-emerald-400 hover:bg-slate-950 border-none bg-transparent cursor-pointer flex items-center gap-2 uppercase font-bold transition-colors"
+                >
+                  <UserPlus size={12} />
+                  <span>Invite User</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setEditModalOpen(true);
+                    setDropdownOpen(false);
+                  }}
+                  className="w-full px-3 py-2.5 text-left text-slate-300 hover:text-cyan-400 hover:bg-slate-950 border-none bg-transparent cursor-pointer flex items-center gap-2 uppercase font-bold transition-colors border-t border-slate-850"
+                >
+                  <Edit2 size={11} />
+                  <span>Edit Board</span>
+                </button>
+                <button
+                  onClick={handleDeleteBoardClick}
+                  className="w-full px-3 py-2.5 text-left text-red-400 hover:text-red-300 hover:bg-slate-950 border-none bg-transparent cursor-pointer flex items-center gap-2 uppercase font-bold transition-colors border-t border-slate-850"
+                >
+                  <Trash2 size={11} />
+                  <span>Delete Board</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
