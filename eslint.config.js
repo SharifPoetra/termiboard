@@ -48,6 +48,6 @@ export default defineConfig([
 
   // Files and Folders ignored by ESLint
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/*test.ts', 'client/vite.config.ts'],
+    ignores: ['**/dist/**', '**/node_modules/**', '**/*test.ts', 'apps/client-web/vite.config.ts'],
   },
 ]);
