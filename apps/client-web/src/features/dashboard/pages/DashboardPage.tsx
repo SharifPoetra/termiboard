@@ -6,9 +6,9 @@ import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { AlertModal } from '../../../components/ui/AlertModal';
+import { EditBoardModal } from '../../../components/ui/EditBoardModal';
 import { useSocket } from '../../../hooks/useSocket';
 import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare, Trash2, Edit2, Bell } from 'lucide-react';
-import { EditBoardModal } from '../../../components/ui/EditBoardModal';
 
 interface DashboardPageProps {
   onSelectBoard: (boardId: string) => void;
@@ -42,7 +42,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
     // Listen to invitation_received events in real-time
     socket.on('invitation_received', (payload) => {
       console.log('[WS_STREAM] Live invitation package arrived:', payload);
-      const inviteData = payload?.data || payload;
+      const inviteData = payload.data;
       addInvitation(inviteData);
     });
 

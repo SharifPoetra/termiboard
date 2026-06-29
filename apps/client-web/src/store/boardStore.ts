@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import axiosInstance from '../lib/axios';
-import type { Board } from '../features/dashboard/types/dashboard.types';
-import type { Column, Card } from '../features/kanban/types/kanban.types';
+import { Board, Card, Column } from '@termiboard/core';
 
 interface BoardState {
   boards: Board[];

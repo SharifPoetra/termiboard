@@ -6,7 +6,7 @@ import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { EditBoardModal } from '../../../components/ui/EditBoardModal';
 import { InviteUserModal } from '../../../components/ui/InviteUserModal';
 import { CardItem } from '../components/CardItem';
-import { Card } from '../types/kanban.types';
+import { Card } from '@termiboard/core';
 import { ArrowLeft, Plus, Terminal, LayoutGrid, Edit2, Trash2, UserPlus, MoreVertical } from 'lucide-react';
 
 import {
@@ -101,8 +101,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
 
     socket.on('board_updated', (payload) => {
       console.log('[WS_STREAM] Incoming frame payload: board_updated');
-      const boardData = payload?.board || payload;
-      syncUpdateBoard(boardData);
+      syncUpdateBoard(payload);
     });
 
     socket.on('board_deleted', () => {
@@ -118,16 +117,12 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
 
     socket.on('column_updated', (payload) => {
       console.log('[WS_STREAM] Incoming frame payload: column_updated');
-      const colData = payload?.column || payload;
-      syncUpdateColumn(colData);
+      syncUpdateColumn(payload);
     });
 
     socket.on('column_deleted', (payload) => {
       console.log('[WS_STREAM] Incoming frame payload: column_deleted');
-      const deletedColumnId = payload?.column?.id || payload?.id || payload;
-      if (deletedColumnId) {
-        syncDeleteColumn(deletedColumnId);
-      }
+      syncDeleteColumn(payload.id);
     });
 
     socket.on('card_created', (payload) => {
@@ -138,23 +133,18 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     socket.on('card_updated', (payload) => {
       if (isLocallyDragging.current) return;
       console.log('[WS_STREAM] Incoming frame payload: card_updated');
-      const cardData = payload?.card || payload;
-      syncUpdateCard(cardData);
+      syncUpdateCard(payload);
     });
 
     socket.on('card_moved', (payload) => {
       if (isLocallyDragging.current) return;
       console.log('[WS_STREAM] Incoming frame payload: card_moved');
-      const cardData = payload?.card || payload;
-      syncUpdateCard(cardData);
+      syncUpdateCard(payload);
     });
 
     socket.on('card_deleted', (payload) => {
       console.log('[WS_STREAM] Incoming frame payload: card_deleted');
-      const deletedCard = payload?.card || payload;
-      if (deletedCard) {
-        syncDeleteCard(deletedCard);
-      }
+      syncDeleteCard(payload);
     });
 
     return () => {

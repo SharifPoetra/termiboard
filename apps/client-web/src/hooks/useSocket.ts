@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../store/authStore';
+import { ServerToClientEvents, ClientToServerEvents } from '@termiboard/core';
 
 interface UseSocketOptions {
   boardId?: string | null;
@@ -8,7 +9,7 @@ interface UseSocketOptions {
 }
 
 export const useSocket = (options?: UseSocketOptions) => {
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
 

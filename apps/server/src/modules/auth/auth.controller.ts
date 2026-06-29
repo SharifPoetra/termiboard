@@ -1,7 +1,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import bcrypt from 'bcryptjs';
 import { or, eq } from 'drizzle-orm';
-import { users } from '../../database/schema.ts';
+import { users } from '@termiboard/core';
 
 // Define the structure of auth Request Body
 interface ProfileBody {

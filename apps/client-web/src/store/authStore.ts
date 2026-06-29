@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import axiosInstance from '../lib/axios';
-import { AuthState, User } from '../features/auth/types/auth.types';
+import { AuthState } from '../features/auth/types/auth.types';
+import { UserResponseData } from '@termiboard/core';
 
 interface AuthActions {
   login: (credentials: Record<string, string>) => Promise<void>;
@@ -137,7 +138,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set) => ({
     try {
       set({
         token,
-        user: JSON.parse(savedUser) as User,
+        user: JSON.parse(savedUser) as UserResponseData,
         isAuthenticated: true,
         isLoading: false,
       });

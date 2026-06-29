@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { eq } from 'drizzle-orm';
-import { cards } from '../../database/schema.js';
+import { cards } from '@termiboard/core';
 
 interface CreateCardBody {
   columnId: string;

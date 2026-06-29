@@ -1,7 +1,7 @@
 import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
-import { users, boards, columns, cards, boardMembers } from './schema';
+import { users, boards, columns, cards, boardMembers } from './schema.ts';
 
-export * from './schema';
+export * from './schema.ts';
 
 // ==========================================
 // 🗄️ DATABASE INFERRED TYPES (From Drizzle Schema)

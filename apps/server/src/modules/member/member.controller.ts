@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { eq, and } from 'drizzle-orm';
-import { boardMembers, boards, users } from '../../database/schema.ts';
+import { boardMembers, boards, users } from '@termiboard/core';
 
 interface AddMemberBody {
   boardId: string;
