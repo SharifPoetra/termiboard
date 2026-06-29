@@ -6,11 +6,13 @@ on:
       - main
     paths:
       - 'apps/server/**'
+      - 'packages/core/**'
   pull_request:
     branches:
       - main
     paths:
       - 'apps/server/**'
+      - 'packages/core/**'
 
 permissions:
   contents: read
@@ -32,17 +34,14 @@ jobs:
       - name: Install Dependencies (Root Environment)
         run: npm ci
 
+      - name: Compile Core Package Types
+        run: npm run build -w @termiboard/core
+
       - name: Execute ESLint Matrix Validation
-        run: |
-          cd apps/server
-          npm run lint
+        run: npm run lint -w termiboard-server
 
       - name: Verify Code Formatting (Prettier)
-        run: |
-          cd apps/server
-          npm run format -- --check
+        run: npm run format -w termiboard-server -- --check
 
       - name: Compile and Build Production Binary (TSC)
-        run: |
-          cd apps/server
-          npm run build
+        run: npm run build -w termiboard-server
