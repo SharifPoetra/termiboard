@@ -14,17 +14,17 @@ dist-ssr
 *.local
 .env
 
-# Client specific
-client/dist
-client/dist-ssr
-client/.local
-client/.env
-client/.env.local
-client/.env.*.local
+# Frontend client-web specific
+apps/client-webdist
+apps/client-webdist-ssr
+apps/client-web.local
+apps/client-web.env
+apps/client-web.env.local
+apps/client-web.env.*.local
 
-# Server specific
-server/dist
-server/.env
+# Backend server specific
+apps/server/dist
+apps/server/.env
 
 # Editor directories and files
 .vscode/*

@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - 'server/**'
+      - 'apps/server/**'
   pull_request:
     branches:
       - main
     paths:
-      - 'server/**'
+      - 'apps/server/**'
 
 permissions:
   contents: read
@@ -34,15 +34,15 @@ jobs:
 
       - name: Execute ESLint Matrix Validation
         run: |
-          cd server
+          cd apps/server
           npm run lint
 
       - name: Verify Code Formatting (Prettier)
         run: |
-          cd server
+          cd apps/server
           npm run format -- --check
 
       - name: Compile and Build Production Binary (TSC)
         run: |
-          cd server
+          cd apps/server
           npm run build
