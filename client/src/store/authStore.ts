@@ -8,6 +8,7 @@ interface AuthActions {
   logout: () => void;
   initializeAuth: () => void;
   clearError: () => void;
+  updateProfile: (profileData: { username?: string; email?: string; password?: string }) => Promise<void>;
 }
 
 // Helper function to non-destructively decode JWT expiration time
@@ -92,6 +93,33 @@ export const useAuthStore = create<AuthState & AuthActions>((set) => ({
       isLoading: false,
       error: null,
     });
+  },
+
+  updateProfile: async (profileData) => {
+    set({ isLoading: true, error: null });
+    try {
+      // Filter out empty password strings so we don't accidentally override with blank data
+      const payload = { ...profileData };
+      if (payload.password === '') delete payload.password;
+
+      // PATCH /api/auth/profile
+      const response = await axiosInstance.patch('/auth/profile', payload);
+      const { user } = response.data.data;
+
+      // Re-save updated user credentials back to client storage layer
+      localStorage.setItem('user', JSON.stringify(user));
+
+      set({
+        user,
+        isLoading: false,
+      });
+    } catch (err: any) {
+      set({
+        isLoading: false,
+        error: err.response?.data?.message || 'Failed to reconfigure profile parameters',
+      });
+      throw err;
+    }
   },
 
   // Synchronize and validate login status when browser triggers an initial boot or refresh

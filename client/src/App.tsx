@@ -5,7 +5,8 @@ import { LoginPage } from './features/auth/pages/LoginPage';
 import { RegisterPage } from './features/auth/pages/RegisterPage';
 import { DashboardPage } from './features/dashboard/pages/DashboardPage';
 import { BoardDetailPage } from './features/kanban/pages/BoardDetailPage';
-import { ShieldCheck, LogOut, LayoutDashboard } from 'lucide-react';
+import { ProfilePage } from './features/auth/pages/ProfilePage';
+import { ShieldCheck, LogOut, LayoutDashboard, User } from 'lucide-react';
 import { Button } from './components/ui/Button';
 
 export default function App() {
@@ -34,6 +35,10 @@ export default function App() {
 
   // IF LOGGED IN, DISPLAY THE MAIN DASHBOARD & SESSION CONTROLS
   if (isAuthenticated) {
+    // PROFILE NAVIGATION INTERCEPTOR: if the user click on username
+    if (activeBoardId === 'PROFILE_PAGE_SIGNAL') {
+      return <ProfilePage onBack={() => setActiveBoardId(null)} />;
+    }
     // IF THE USER CLICKS A SPECIFIC BOARD (TUNNELING WORKSPACE)
     if (activeBoardId) {
       return <BoardDetailPage boardId={activeBoardId} onBackToDashboard={() => setActiveBoardId(null)} />;
@@ -75,6 +80,13 @@ export default function App() {
               className="flex items-center justify-center gap-2"
             >
               <LayoutDashboard size={14} /> Go to Dashboard
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setActiveBoardId('PROFILE_PAGE_SIGNAL')}
+              className="flex items-center justify-center gap-2 border border-slate-700 bg-slate-850 text-slate-200 hover:bg-slate-800 transition-colors"
+            >
+              <User size={14} /> Account Settings
             </Button>
             <Button variant="danger" onClick={logout} className="flex items-center justify-center gap-2">
               <LogOut size={14} /> Logout

@@ -153,9 +153,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           <Terminal className="text-emerald-400 animate-pulse shrink-0" size={18} />
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-xs md:text-sm font-bold tracking-widest text-slate-200 shrink-0">Dashboard //</span>
-            <span className="text-[10px] md:text-xs text-slate-500 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 truncate max-w-[120px] sm:max-w-xs md:max-w-none">
+            <button
+              onClick={() => onSelectBoard('PROFILE_PAGE_SIGNAL')}
+              className="text-[10px] md:text-xs text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 hover:border-emerald-500/40 hover:text-emerald-400 transition-colors font-mono cursor-pointer truncate"
+              title="Open Profile Settings"
+            >
               User: {user?.username}
-            </span>
+            </button>
           </div>
         </div>
 
