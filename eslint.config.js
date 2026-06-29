@@ -29,7 +29,7 @@ export default defineConfig([
 
   // FRONTEND Custom Configuration (React + Vite + TSX)
   {
-    files: ['client/src/**/*.{ts,tsx}'],
+    files: ['apps/client-web/src/**/*.{ts,tsx}'],
     plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
