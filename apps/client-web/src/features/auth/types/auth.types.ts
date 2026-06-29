@@ -1,12 +1,7 @@
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  createdAt: string;
-}
+import { UserResponseData } from '@termiboard/core';
 
 export interface AuthState {
-  user: User | null;
+  user: UserResponseData | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;

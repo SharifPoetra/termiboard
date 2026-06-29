@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import pg from 'pg';
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as schema from './schema.ts';
+import * as schema from '@termiboard/core';
 
 export type TermiDb = NodePgDatabase<typeof schema>;
 

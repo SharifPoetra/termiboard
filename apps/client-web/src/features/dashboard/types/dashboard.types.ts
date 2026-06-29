@@ -1,9 +1,4 @@
-export interface Board {
-  id: string;
-  name: string;
-  description: string | null;
-  createdAt: string;
-}
+import { Board } from '@termiboard/core';
 
 export interface DashboardState {
   boards: Board[];

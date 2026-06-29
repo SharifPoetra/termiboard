@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'apps/client-web/**'
+      - 'packages/core/**'
 
 permissions:
   contents: read
@@ -36,10 +37,11 @@ jobs:
       - name: Install Dependencies (Root Environment)
         run: npm ci
 
+      - name: Compile Core Package Types
+        run: npm run build -w @termiboard/core
+
       - name: Compile and Build Production Matrix
-        run: |
-          cd apps/client-web
-          npm run build
+        run: npm run build -w termiboard-client-web
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 

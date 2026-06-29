@@ -1,24 +1,14 @@
 import { create } from 'zustand';
 import axiosInstance from '../lib/axios';
-
-export interface Invitation {
-  id: string;
-  boardId: string;
-  userId: string;
-  role: string;
-  status: 'pending' | 'active';
-  createdAt: string;
-  // Optional: If the backend sends additional board name payload metadata
-  boardName?: string;
-}
+import { BoardMember } from '@termiboard/core';
 
 interface NotificationState {
-  invitations: Invitation[];
+  invitations: BoardMember[];
   isLoading: boolean;
 }
 
 interface NotificationActions {
-  addInvitation: (invitation: Invitation) => void;
+  addInvitation: (invitation: BoardMember) => void;
   acceptInvitation: (boardId: string) => Promise<void>;
   rejectInvitation: (boardId: string) => Promise<void>;
   // Invoked to fetch pending invitations upon initial application boot or refresh

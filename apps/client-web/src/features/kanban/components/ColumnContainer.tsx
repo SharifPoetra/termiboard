@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Column, Card } from '../types/kanban.types';
+import { Column, Card } from '@termiboard/core';
 import { useBoardStore } from '../../../store/boardStore';
 import { CardItem } from './CardItem';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';

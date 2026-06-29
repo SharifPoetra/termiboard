@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { eq, and, or } from 'drizzle-orm';
-import { boards, boardMembers } from '../../database/schema.ts';
+import { boards, boardMembers } from '@termiboard/core';
 
 // Request body and params interfaces
 interface CreateBoardBody {

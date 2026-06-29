@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { eq } from 'drizzle-orm';
-import { columns } from '../../database/schema.js';
+import { columns } from '@termiboard/core';
 
 interface CreateColumnBody {
   boardId: string;

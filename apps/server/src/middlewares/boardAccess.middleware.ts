@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { eq, and, or } from 'drizzle-orm';
-import { boardMembers, boards, columns, cards } from '../database/schema.ts';
+import { boardMembers, boards, columns, cards } from '@termiboard/core';
 
 // Expand interface to support all parameter variations across columns and cards
 interface RequestParams {

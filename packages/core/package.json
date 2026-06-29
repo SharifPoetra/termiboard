@@ -1,0 +1,31 @@
+{
+  "name": "@termiboard/core",
+  "version": "1.0.0",
+  "description": "Termiboard cross repo shared types metadata",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "^0.45.2" 
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SharifPoetra/termiboard.git"
+  },
+  "author": "SharifPoetra",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/SharifPoetra/termiboard/issues"
+  },
+  "homepage": "https://github.com/SharifPoetra/termiboard#readme"
+}

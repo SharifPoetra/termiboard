@@ -1,6 +1,7 @@
 import 'fastify';
 import { Server } from 'socket.io';
 import { TermiDb } from '../database/db.ts';
+import { ServerToClientEvents, ClientToServerEvents } from '@termiboard/core';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -11,7 +12,7 @@ declare module 'fastify' {
       JWT_SECRET: string;
     };
     db: TermiDb;
-    io: Server;
+    io: Server<ClientToServerEvents, ServerToClientEvents>;
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     checkBoardAccess: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
