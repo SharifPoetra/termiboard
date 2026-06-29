@@ -3,21 +3,20 @@ import bcrypt from 'bcryptjs';
 import { or, eq } from 'drizzle-orm';
 import { users } from '../../database/schema.ts';
 
-// Define the structure of Register Request Body
-interface RegisterBody {
+// Define the structure of auth Request Body
+interface ProfileBody {
   username: string;
   email: string;
   password: string;
 }
 
-// Define the structure for Login Request Body
-interface LoginBody {
-  username: string;
-  email: string;
-  password: string;
+interface UpdateProfileBody {
+  username?: string;
+  email?: string;
+  password?: string;
 }
 
-export const registerHandler = async (request: FastifyRequest<{ Body: RegisterBody }>, reply: FastifyReply) => {
+export const registerHandler = async (request: FastifyRequest<{ Body: ProfileBody }>, reply: FastifyReply) => {
   const { username, email, password } = request.body;
   const { db } = request.server; // Access the database pool via app.db
 
@@ -71,7 +70,7 @@ export const registerHandler = async (request: FastifyRequest<{ Body: RegisterBo
   }
 };
 
-export const loginHandler = async (request: FastifyRequest<{ Body: LoginBody }>, reply: FastifyReply) => {
+export const loginHandler = async (request: FastifyRequest<{ Body: ProfileBody }>, reply: FastifyReply) => {
   const { username, email, password } = request.body;
   const { db } = request.server;
 
@@ -131,5 +130,47 @@ export const loginHandler = async (request: FastifyRequest<{ Body: LoginBody }>,
       status: 'error',
       message: 'Internal server error',
     });
+  }
+};
+
+export const updateProfileHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+  const userId = (request.user as any).id;
+  const { username, email, password } = request.body as UpdateProfileBody;
+  const { db } = request.server;
+
+  try {
+    const updatePayload: UpdateProfileBody = {};
+
+    if (username !== undefined) updatePayload.username = username;
+    if (email !== undefined) updatePayload.email = email;
+
+    // Hash the password if it's being updated
+    if (password && password.trim() !== '') {
+      const salt = await bcrypt.genSalt(10);
+      updatePayload.password = await bcrypt.hash(password, salt);
+    }
+
+    // Execute partial update query
+    const updatedUserResult = await db.update(users).set(updatePayload).where(eq(users.id, userId)).returning({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      createdAt: users.createdAt,
+    });
+
+    if (updatedUserResult.length === 0) {
+      return reply.status(404).send({ status: 'fail', message: 'User identity not found.' });
+    }
+
+    return reply.status(200).send({
+      status: 'success',
+      message: 'Profile database parameters updated successfully.',
+      data: {
+        user: updatedUserResult[0],
+      },
+    });
+  } catch (err: any) {
+    request.server.log.error(err, 'Profile update sequence execution failed');
+    return reply.status(500).send({ status: 'error', message: 'Internal server error' });
   }
 };
