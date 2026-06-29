@@ -1,5 +1,7 @@
 import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
-import { users, boards, columns, cards, boardMembers } from '../../../apps/server/src/database/schema';
+import { users, boards, columns, cards, boardMembers } from './schema';
+
+export * from './schema';
 
 // ==========================================
 // 🗄️ DATABASE INFERRED TYPES (From Drizzle Schema)
@@ -8,7 +10,9 @@ import { users, boards, columns, cards, boardMembers } from '../../../apps/serve
 // Users Types
 export type User = InferSelectModel<typeof users>;
 export type NewUser = InferInsertModel<typeof users>;
-export type UserResponseData = Omit<User, 'passwordHash'>; // Safe without password hash
+export type UserResponseData = Omit<User, 'passwordHash' | 'createdAt'> & {
+  createdAt: string;
+};
 
 // Boards Types
 export type Board = InferSelectModel<typeof boards>;
@@ -52,7 +56,7 @@ export interface ServerToClientEvents {
   board_deleted: (payload: { id: string }) => void;
 
   // Members Sync
-  invitation_received: (payload: { message: string; data: Partial<BoardMember> }) => void;
+  invitation_received: (payload: { message: string; data: BoardMember }) => void;
   member_joined: (member: BoardMember) => void;
   member_kicked: (payload: { boardId: string; userId: string }) => void;
 
