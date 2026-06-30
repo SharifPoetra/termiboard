@@ -29,12 +29,27 @@ const app = fastify({
 // Environment variables validation schema
 const schema = {
   type: 'object',
-  required: ['API_ADDR', 'API_PORT', 'DATABASE_URL', 'JWT_SECRET'],
+  required: [
+    'API_ADDR',
+    'API_PORT',
+    'DATABASE_URL',
+    'JWT_SECRET',
+    'SMTP_HOST',
+    'SMTP_PORT',
+    'SMTP_USER',
+    'SMTP_PASS',
+    'SMTP_FROM',
+  ],
   properties: {
     API_ADDR: { type: 'string', default: '127.0.0.1' },
     API_PORT: { type: 'string', default: '3001' },
     DATABASE_URL: { type: 'string' },
     JWT_SECRET: { type: 'string' },
+    SMTP_HOST: { type: 'string' },
+    SMTP_PORT: { type: 'number' },
+    SMTP_USER: { type: 'string' },
+    SMTP_PASS: { type: 'string' },
+    SMTP_FROM: { type: 'string' },
   },
 };
 

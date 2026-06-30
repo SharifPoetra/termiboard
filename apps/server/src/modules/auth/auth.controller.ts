@@ -67,7 +67,7 @@ export const registerHandler = async (request: FastifyRequest<{ Body: ProfileBod
         createdAt: users.createdAt,
       });
 
-    await sendOtpEmail(email, username, otpCode);
+    await sendOtpEmail(email, username, otpCode, request.server.config);
 
     // Return success response prompting client to route to OTP panel
     return reply.status(200).send({
@@ -274,7 +274,7 @@ export const resendOtpHandler = async (request: FastifyRequest<{ Body: ResendOtp
       .where(eq(users.id, user.id));
 
     // Send a new OTP email using the mailer utility
-    await sendOtpEmail(email, user.username, newOtpCode);
+    await sendOtpEmail(email, user.username, newOtpCode, request.server.config);
 
     return reply.status(200).send({
       status: 'success',

@@ -1,18 +1,19 @@
 import nodemailer from 'nodemailer';
+import { FastifyInstance } from 'fastify';
 
-export const sendOtpEmail = async (to: string, username: string, otp: string) => {
+export const sendOtpEmail = async (to: string, username: string, otp: string, config: FastifyInstance['config']) => {
   const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false, // true for 465, false for other ports
+    host: config.SMTP_HOST,
+    port: config.SMTP_PORT,
+    secure: true,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: config.SMTP_USER,
+      pass: config.SMTP_PASS,
     },
   });
 
   const mailOptions = {
-    from: process.env.SMTP_FROM,
+    from: config.SMTP_FROM,
     to,
     subject: '[TermiBoard] Securing Channel - Action Required: Verify OTP',
     text: `Hello ${username},\n\nYour dynamic terminal access security code is: ${otp}\n\nThis code will expire in 5 minutes.\nIf you did not initiate this command, please ignore this log.`,
