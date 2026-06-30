@@ -12,7 +12,8 @@
     "dev:client-web": "npm run dev -w termiboard-client-web",
     "build:server": "npm run build -w termiboard-server",
     "build:client-web": "npm run build -w termiboard-client-web",
-    "build:packages": "npm run build -w @termiboard/core"
+    "build:packages": "npm run build -w @termiboard/core",
+    "start:server": "npm start -w termiboard-server"
   },
   "repository": {
     "type": "git",
