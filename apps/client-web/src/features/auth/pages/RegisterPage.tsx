@@ -8,9 +8,14 @@ import { LegalModal } from '../../../components/ui/LegalModal';
 interface RegisterPageProps {
   onNavigateToLogin: () => void;
   onNavigateToHome: () => void;
+  onRegisterSuccess: (email: string) => void;
 }
 
-export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, onNavigateToHome }) => {
+export const RegisterPage: React.FC<RegisterPageProps> = ({
+  onNavigateToLogin,
+  onNavigateToHome,
+  onRegisterSuccess,
+}) => {
   const { register, isLoading, error, clearError } = useAuthStore();
 
   const [formData, setFormData] = useState({
@@ -59,9 +64,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
     if (!validateForm()) return;
 
     try {
-      await register(formData);
-      alert('Registration successful! Please login.');
-      onNavigateToLogin();
+      const registeredEmail = await register(formData);
+      onRegisterSuccess(registeredEmail);
     } catch (err) {
       // Global errors are handled by the zustand store
     }
