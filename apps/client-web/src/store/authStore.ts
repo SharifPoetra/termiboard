@@ -5,11 +5,13 @@ import { UserResponseData } from '@termiboard/core';
 
 interface AuthActions {
   login: (credentials: Record<string, string>) => Promise<void>;
-  register: (userData: Record<string, string>) => Promise<void>;
+  register: (userData: Record<string, string>) => Promise<string>;
   logout: () => void;
   initializeAuth: () => void;
   clearError: () => void;
   updateProfile: (profileData: { username?: string; email?: string; password?: string }) => Promise<void>;
+  verifyOtp: (email: string, otp: string) => Promise<void>;
+  resendOtp: (email: string) => Promise<void>;
 }
 
 // Helper function to non-destructively decode JWT expiration time
@@ -46,12 +48,53 @@ export const useAuthStore = create<AuthState & AuthActions>((set) => ({
     set({ isLoading: true, error: null });
     try {
       // POST /api/auth/register
-      await axiosInstance.post('/auth/register', userData);
+      const response = await axiosInstance.post('/auth/register', userData);
       set({ isLoading: false });
+      return response.data.data.email;
     } catch (err: any) {
       set({
         isLoading: false,
         error: err.response?.data?.message || 'Registration failed',
+      });
+      throw err;
+    }
+  },
+
+  verifyOtp: async (email, otp) => {
+    set({ isLoading: true, error: null });
+    try {
+      // POST /api/auth/verify-otp
+      const response = await axiosInstance.post('/auth/verify-otp', { email, otp });
+      const { token, user } = response.data.data;
+
+      // If the OTP is valid, the backend returns a token. Save it to storage.
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+
+      set({
+        isAuthenticated: true,
+        user,
+        isLoading: false,
+      });
+    } catch (err: any) {
+      set({
+        isLoading: false,
+        error: err.response?.data?.message || 'Verification rejected',
+      });
+      throw err;
+    }
+  },
+
+  resendOtp: async (email) => {
+    set({ isLoading: true, error: null });
+    try {
+      // POST /api/auth/resend-otp
+      await axiosInstance.post('/auth/resend-otp', { email });
+      set({ isLoading: false });
+    } catch (err: any) {
+      set({
+        isLoading: false,
+        error: err.response?.data?.message || 'Resend signal blocked',
       });
       throw err;
     }

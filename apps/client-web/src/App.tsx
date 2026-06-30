@@ -6,6 +6,7 @@ import { RegisterPage } from './features/auth/pages/RegisterPage';
 import { DashboardPage } from './features/dashboard/pages/DashboardPage';
 import { BoardDetailPage } from './features/kanban/pages/BoardDetailPage';
 import { ProfilePage } from './features/auth/pages/ProfilePage';
+import { VerifyOtpPage } from './features/auth/pages/VerifyOtpPage';
 import { ShieldCheck, LogOut, LayoutDashboard, User } from 'lucide-react';
 import { Button } from './components/ui/Button';
 
@@ -14,6 +15,9 @@ export default function App() {
 
   // Adjusted navigation state scheme to include the cyberpunk home page landing arena
   const [view, setView] = useState<'home' | 'login' | 'register'>('home');
+
+  // STATE TRAP: Stores email temporarily while the user is in the OTP verification process
+  const [otpEmailTrap, setOtpEmailTrap] = useState<string | null>(null);
 
   // State to track whether the user is opening the Dashboard Grid or viewing a specific Board
   const [showDashboard, setShowDashboard] = useState<boolean>(false);
@@ -30,6 +34,16 @@ export default function App() {
         <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
         <p className="text-xs tracking-widest animate-pulse">[ Loading TermiBoard... ]</p>
       </div>
+    );
+  }
+
+  if (otpEmailTrap) {
+    return (
+      <VerifyOtpPage
+        email={otpEmailTrap}
+        onCancel={() => setOtpEmailTrap(null)}
+        onSuccess={() => setOtpEmailTrap(null)}
+      />
     );
   }
 
@@ -109,6 +123,12 @@ export default function App() {
       onLoginSuccess={() => console.log('Successfully connected!')}
     />
   ) : (
-    <RegisterPage onNavigateToLogin={() => setView('login')} onNavigateToHome={() => setView('home')} />
+    <RegisterPage
+      onNavigateToLogin={() => setView('login')}
+      onNavigateToHome={() => setView('home')}
+      onRegisterSuccess={(email) => {
+        setOtpEmailTrap(email);
+      }}
+    />
   );
 }

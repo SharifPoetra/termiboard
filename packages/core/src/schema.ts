@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp } from 'drizzle-orm/pg-core';
+import { boolean, pgTable, uuid, varchar, text, timestamp } from 'drizzle-orm/pg-core';
 
 // Users Table Schema
 export const users = pgTable('users', {
@@ -6,6 +6,9 @@ export const users = pgTable('users', {
   username: varchar('username', { length: 50 }).notNull().unique(),
   email: varchar('email', { length: 100 }).notNull().unique(),
   passwordHash: text('password_hash').notNull(),
+  isVerified: boolean('is_verified').default(false).notNull(),
+  otpCode: varchar('otp_code', { length: 6 }),
+  otpExpiresAt: timestamp('otp_expires_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

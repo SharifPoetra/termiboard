@@ -10,6 +10,11 @@ declare module 'fastify' {
       API_PORT: string;
       DATABASE_URL: string;
       JWT_SECRET: string;
+      SMTP_HOST: string;
+      SMTP_PORT: number;
+      SMTP_USER: string;
+      SMTP_PASS: string;
+      SMTP_FROM: string;
     };
     db: TermiDb;
     io: Server<ClientToServerEvents, ServerToClientEvents>;

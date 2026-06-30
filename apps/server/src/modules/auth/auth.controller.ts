@@ -1,7 +1,8 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import bcrypt from 'bcryptjs';
-import { or, eq } from 'drizzle-orm';
+import { and, gt, or, eq } from 'drizzle-orm';
 import { users } from '@termiboard/core';
+import { sendOtpEmail } from '../../utils/mailer.ts';
 
 // Define the structure of auth Request Body
 interface ProfileBody {
@@ -14,6 +15,12 @@ interface UpdateProfileBody {
   username?: string;
   email?: string;
   password?: string;
+  passwordHash?: string;
+}
+
+interface VerifyOtpBody {
+  email: string;
+  otp: string;
 }
 
 export const registerHandler = async (request: FastifyRequest<{ Body: ProfileBody }>, reply: FastifyReply) => {
@@ -23,14 +30,45 @@ export const registerHandler = async (request: FastifyRequest<{ Body: ProfileBod
   try {
     // Check if username or email already exists
     const userCheck = await db
-      .select({ id: users.id })
+      .select({ id: users.id, isVerified: users.isVerified })
       .from(users)
       .where(or(eq(users.username, username), eq(users.email, email)));
 
+    // Generate 6-digit cryptographic otp code string
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // Expires in 5 minutes
+
     if (userCheck.length > 0) {
-      return reply.status(400).send({
-        status: 'fail',
-        message: 'Username or email is already registered',
+      const existingUser = userCheck[0];
+
+      if (existingUser.isVerified) {
+        return reply.status(400).send({
+          status: 'fail',
+          message: 'Username or email is already registered',
+        });
+      }
+
+      // Hash the password securely using bcrypt
+      const saltRounds = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(password, saltRounds);
+
+      await db
+        .update(users)
+        .set({
+          username,
+          email,
+          passwordHash,
+          otpCode,
+          otpExpiresAt,
+        })
+        .where(eq(users.id, existingUser.id));
+
+      await sendOtpEmail(email, username, otpCode, request.server.config);
+
+      return reply.status(200).send({
+        status: 'success',
+        message: 'Registration sequence re-initiated. New OTP code dispatched to email.',
+        data: { email },
       });
     }
 
@@ -39,12 +77,15 @@ export const registerHandler = async (request: FastifyRequest<{ Body: ProfileBod
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
     // Insert the new user into Database
-    const newUser = await db
+    await db
       .insert(users)
       .values({
         username,
         email,
         passwordHash,
+        isVerified: false,
+        otpCode,
+        otpExpiresAt,
       })
       .returning({
         id: users.id,
@@ -53,16 +94,79 @@ export const registerHandler = async (request: FastifyRequest<{ Body: ProfileBod
         createdAt: users.createdAt,
       });
 
-    // Return success response with created user data
-    return reply.status(201).send({
+    await sendOtpEmail(email, username, otpCode, request.server.config);
+
+    // Return success response prompting client to route to OTP panel
+    return reply.status(200).send({
       status: 'success',
-      message: 'User registered successfully',
+      message: 'Registration initial sequence complete. OTP code dispatched to email.',
       data: {
-        user: newUser[0],
+        email,
       },
     });
   } catch (err: any) {
-    request.server.log.error(err, '❌ Registration error:');
+    request.server.log.error(err, 'Registration failed');
+    return reply.status(500).send({
+      status: 'error',
+      message: 'Internal server error',
+    });
+  }
+};
+
+// verifyOtpHandler to authorize unverified deployment records
+export const verifyOtpHandler = async (request: FastifyRequest<{ Body: VerifyOtpBody }>, reply: FastifyReply) => {
+  const { email, otp } = request.body;
+  const { db } = request.server;
+
+  try {
+    // Check user records matching email, non-expired OTP, and current match validation
+    const userResult = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.email, email),
+          eq(users.otpCode, otp),
+          gt(users.otpExpiresAt, new Date()), // Check if current timestamp hasn't crossed expiration
+        ),
+      );
+
+    if (userResult.length === 0) {
+      return reply.status(400).send({
+        status: 'fail',
+        message: 'Invalid or expired OTP authentication code.',
+      });
+    }
+
+    const user = userResult[0];
+
+    // Activate the user record status inside database matrix and clear OTP records
+    await db
+      .update(users)
+      .set({
+        isVerified: true,
+        otpCode: null,
+        otpExpiresAt: null,
+      })
+      .where(eq(users.id, user.id));
+
+    // Sign the secure JWT access certificate token payload
+    const token = request.server.jwt.sign({ id: user.id, email: user.email }, { expiresIn: '1d' });
+
+    return reply.status(200).send({
+      status: 'success',
+      message: 'OTP verification successful. Channel secured.',
+      data: {
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+        },
+      },
+    });
+  } catch (err: any) {
+    request.server.log.error(err, 'OTP Verification failed');
     return reply.status(500).send({
       status: 'error',
       message: 'Internal server error',
@@ -89,6 +193,13 @@ export const loginHandler = async (request: FastifyRequest<{ Body: ProfileBody }
     }
 
     const user = userResult[0];
+
+    if (!user.isVerified) {
+      return reply.status(403).send({
+        status: 'fail',
+        message: 'Account authentication is unverified. Please execute OTP protocol validation.',
+      });
+    }
 
     // Verify the password using bcrypt
     const isPasswordMatch = await bcrypt.compare(password, user.passwordHash);
@@ -125,7 +236,82 @@ export const loginHandler = async (request: FastifyRequest<{ Body: ProfileBody }
       },
     });
   } catch (err: any) {
-    request.server.log.error(err, '❌ Login error:');
+    request.server.log.error(err, 'Login failed');
+    return reply.status(500).send({
+      status: 'error',
+      message: 'Internal server error',
+    });
+  }
+};
+
+interface ResendOtpBody {
+  email: string;
+}
+
+export const resendOtpHandler = async (request: FastifyRequest<{ Body: ResendOtpBody }>, reply: FastifyReply) => {
+  const { email } = request.body;
+  const { db } = request.server;
+
+  try {
+    // Check if user exist based on email
+    const userResult = await db.select().from(users).where(eq(users.email, email));
+
+    if (userResult.length === 0) {
+      return reply.status(404).send({
+        status: 'fail',
+        message: 'No account matches this email address.',
+      });
+    }
+
+    const user = userResult[0];
+
+    // Prevent resend if the user is already verified
+    if (user.isVerified) {
+      return reply.status(400).send({
+        status: 'fail',
+        message: 'This account is already verified. Resend command aborted.',
+      });
+    }
+
+    // Rate-limit to prevent spamming resend email
+    if (user.otpExpiresAt) {
+      const currentTimestamp = new Date().getTime();
+      const existingExpiry = new Date(user.otpExpiresAt).getTime();
+      const timeLeft = existingExpiry - currentTimestamp;
+
+      if (timeLeft > 4 * 60 * 1000) {
+        return reply.status(429).send({
+          status: 'fail',
+          message: 'Rate limit hit. Please wait 60 seconds before requesting another token code.',
+        });
+      }
+    }
+
+    // Re-generate a new 6-digit OTP & set expiry time T-Minus 5 minutes
+    const newOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const newOtpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    // Update new OTP data to the database
+    await db
+      .update(users)
+      .set({
+        otpCode: newOtpCode,
+        otpExpiresAt: newOtpExpiresAt,
+      })
+      .where(eq(users.id, user.id));
+
+    // Send a new OTP email using the mailer utility
+    await sendOtpEmail(email, user.username, newOtpCode, request.server.config);
+
+    return reply.status(200).send({
+      status: 'success',
+      message: 'New dynamic OTP code generated and dispatched to your inbox.',
+      data: {
+        email,
+      },
+    });
+  } catch (err: any) {
+    request.server.log.error(err, 'Resend OTP sequence failed');
     return reply.status(500).send({
       status: 'error',
       message: 'Internal server error',
@@ -147,7 +333,7 @@ export const updateProfileHandler = async (request: FastifyRequest, reply: Fasti
     // Hash the password if it's being updated
     if (password && password.trim() !== '') {
       const salt = await bcrypt.genSalt(10);
-      updatePayload.password = await bcrypt.hash(password, salt);
+      updatePayload.passwordHash = await bcrypt.hash(password, salt);
     }
 
     // Execute partial update query
