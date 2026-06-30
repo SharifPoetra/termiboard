@@ -9,6 +9,13 @@ API_ADDR=127.0.0.1
 API_PORT=3001
 DATABASE_URL=postgres://...
 JWT_SECRET=your_jwt_secret
+
+# SMTP Configuration
+SMTP_HOST=smtp.yourprovider.com
+SMTP_PORT=587
+SMTP_USER=your_smtp_username
+SMTP_PASS=your_smtp_password
+SMTP_FROM="TermiBoard Security <security@yourdomain.com>"
 ```
 
 ## 📡 REST API Reference
@@ -17,9 +24,11 @@ All requests must set the header `Content-Type: application/json`. Protected end
 
 ### 1. Authentication Module (/api/auth)
 
-#### 🔹 Register a New Account
+#### 🔹 Register a New Account (Triggers OTP Send)
 
-- **Endpoint**: `POST /api/auth/register`
+Creates a temporary inactive account entity and dispatches a 6-digit verification code to the specified email address.
+
+- **Endpoint**: POST /api/auth/register
 - **Auth Required**: No
 - **Request Body**:
 
@@ -31,26 +40,99 @@ All requests must set the header `Content-Type: application/json`. Protected end
 }
 ```
 
-- **Success Response (201 Created)**:
+- **Success Response (200 OK)**:
 
 ```json
 {
   "status": "success",
-  "message": "User registered successfully",
+  "message": "Registration initial sequence complete. OTP code dispatched to email.",
   "data": {
+    "email": "sharif@example.com"
+  }
+}
+```
+
+#### 🔹 Verify Registration OTP
+
+Validates the 6-digit code received via email. If successful, activates the account state and issues a secure JWT access certificate token.
+
+- **Endpoint**: POST /api/auth/verify-otp
+- **Auth Required**: No
+- **Request Body**:
+
+```json
+{
+  "email": "sharif@example.com",
+  "otp": "123456"
+}
+```
+
+- **Success Response (200 OK)**:
+
+```json
+{
+  "status": "success",
+  "message": "OTP verification successful. Channel secured.",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "user": {
       "id": "e4a8b792-51c3-4c4c-811a-7b3b4d4567ef",
       "username": "sharif",
-      "email": "sharif@example.com",
-      "createdAt": "2026-06-13T08:00:00.000Z"
+      "email": "sharif@example.com"
     }
   }
 }
 ```
 
+- **Error Response (400 Bad Request)**:
+
+```json
+{
+  "status": "fail",
+  "message": "Invalid or expired OTP authentication code."
+}
+```
+
+#### 🔹 Resend Verification OTP
+
+Generates a fresh 6-digit security token and re-routes it to the target user inbox. This endpoint is protected by a 60-second cool-down constraint.
+
+- **Endpoint**: POST /api/auth/resend-otp
+- **Auth Required**: No
+- **Request Body**:
+
+```json
+{
+  "email": "sharif@example.com"
+}
+```
+
+- **Success Response (200 OK)**:
+
+```json
+{
+  "status": "success",
+  "message": "New dynamic OTP code generated and dispatched to your inbox.",
+  "data": {
+    "email": "sharif@example.com"
+  }
+}
+```
+
+- **Rate Limit Error (429 Too Many Requests)**:
+
+```json
+{
+  "status": "fail",
+  "message": "Rate limit hit. Please wait 60 seconds before requesting another token code."
+}
+```
+
 #### 🔹 Log In to Account
 
-- **Endpoint**: `POST /api/auth/login`
+Authenticates the profile credentials. Accounts that haven't passed the OTP verification gate will be denied access with a 403 Forbidden status.
+
+- **Endpoint**: POST /api/auth/login
 - **Auth Required**: No
 - **Request Body**:
 
@@ -72,16 +154,24 @@ All requests must set the header `Content-Type: application/json`. Protected end
     "user": {
       "id": "e4a8b792-51c3-4c4c-811a-7b3b4d4567ef",
       "username": "sharif",
-      "email": "sharif@example.com",
-      "createdAt": "2026-06-13T08:00:00.000Z"
+      "email": "sharif@example.com"
     }
   }
 }
 ```
 
+- **Unverified Error Response (403 Forbidden)**:
+
+```json
+{
+  "status": "fail",
+  "message": "Account authentication is unverified. Please execute OTP protocol validation."
+}
+```
+
 #### 🔹 Update User Profile Details
 
-- **Endpoint**: `PATCH /api/auth/profile`
+- **Endpoint**: PATCH /api/auth/profile
 - **Auth Required**: Yes
 - **Request Body (Partial Update)**:
 
