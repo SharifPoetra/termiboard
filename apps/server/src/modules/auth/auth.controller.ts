@@ -34,20 +34,47 @@ export const registerHandler = async (request: FastifyRequest<{ Body: ProfileBod
       .from(users)
       .where(or(eq(users.username, username), eq(users.email, email)));
 
+    // Generate 6-digit cryptographic otp code string
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // Expires in 5 minutes
+
     if (userCheck.length > 0) {
-      return reply.status(400).send({
-        status: 'fail',
-        message: 'Username or email is already registered',
+      const existingUser = userCheck[0];
+
+      if (existingUser.isVerified) {
+        return reply.status(400).send({
+          status: 'fail',
+          message: 'Username or email is already registered',
+        });
+      }
+
+      // Hash the password securely using bcrypt
+      const saltRounds = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(password, saltRounds);
+
+      await db
+        .update(users)
+        .set({
+          username,
+          email,
+          passwordHash,
+          otpCode,
+          otpExpiresAt,
+        })
+        .where(eq(users.id, existingUser.id));
+
+      await sendOtpEmail(email, username, otpCode, request.server.config);
+
+      return reply.status(200).send({
+        status: 'success',
+        message: 'Registration sequence re-initiated. New OTP code dispatched to email.',
+        data: { email },
       });
     }
 
     // Hash the password securely using bcrypt
     const saltRounds = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, saltRounds);
-
-    // Generate 6-digit cryptographic otp code string
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // Expires in T-Minus 5 minutes
 
     // Insert the new user into Database
     await db
