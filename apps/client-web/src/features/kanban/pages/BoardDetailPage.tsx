@@ -272,13 +272,18 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     // Locate the exact physical placement index where the card ended up
     const finalIndex = currentList.findIndex((c) => c.id === cardId);
 
-    // Fallback to end of lane if somehow index parsing evaluates to -1
-    const finalPosition = String(finalIndex !== -1 ? finalIndex + 1 : currentList.length);
+    if (finalIndex !== -1) {
+      const prevCard = currentList[finalIndex - 1];
+      const nextCard = currentList[finalIndex + 1];
 
-    try {
-      await persistCardPosition(cardId, finalColumnId, finalPosition);
-    } catch (err) {
-      console.error('Database sync deferred:', err);
+      // Take the string position value as the upper/lower bound rank
+      const prevRank = prevCard ? prevCard.position : null;
+      const nextRank = nextCard ? nextCard.position : null;
+      try {
+        await persistCardPosition(cardId, finalColumnId, prevRank, nextRank);
+      } catch (err) {
+        console.error('Database sync deferred:', err);
+      }
     }
   };
 
