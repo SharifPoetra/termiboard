@@ -1,6 +1,6 @@
 const CHARS = '0123456789abcdefghijklmnopqrstuvwxyz';
 
-export function getRankBetween(prev: string | null, next: string | null): string {
+export function getRankBetween(prev?: string | null, next?: string | null): string {
   const p = prev || '0';
   const n = next || 'z';
 
