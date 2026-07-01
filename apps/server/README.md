@@ -548,6 +548,8 @@ Authenticates the profile credentials. Accounts that haven't passed the OTP veri
 
 #### 🔹 Create a New Task Card
 
+Newly created cards are automatically appended to the **absolute bottom** of the target column. Position values are computed implicitly via backend sorting algorithms.
+
 - **Endpoint**: `POST /api/cards`
 - **Auth Required**: Yes
 - **Request Body**:
@@ -556,14 +558,34 @@ Authenticates the profile credentials. Accounts that haven't passed the OTP veri
 {
   "columnId": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
   "title": "Setup WebSocket Implementation",
-  "content": "Integrate real-time capabilities via socket.io gateway.",
-  "position": "1"
+  "content": "Integrate real-time capabilities via socket.io gateway."
+}
+```
+
+- **Success Response (201 Created)**:
+
+```json
+{
+  "status": "success",
+  "message": "Card created successfully",
+  "data": {
+    "card": {
+      "id": "cc987654-32ba-cdba-feea-1234567890ab",
+      "columnId": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
+      "title": "Setup WebSocket Implementation",
+      "content": "Integrate real-time capabilities via socket.io gateway.",
+      "position": "8",
+      "createdAt": "2026-06-13T08:58:05.000Z"
+    }
+  }
 }
 ```
 
 - **Triggered Side Effect**: Broadcasts a WebSocket event `card_created` to all clients actively viewing the parent board.
 
 #### 🔹 Fetch Cards Within a Column
+
+Returns all cards assigned to the requested lane, **automatically sorted** in chronological/spatial order ascending (asc) via Lexorank fractional weights.
 
 - **Endpoint**: `GET /api/cards/:columnId`
 - **Auth Required**: Yes
@@ -579,8 +601,16 @@ Authenticates the profile credentials. Accounts that haven't passed the OTP veri
         "columnId": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
         "title": "Setup WebSocket Implementation",
         "content": "Integrate real-time capabilities via socket.io gateway.",
-        "position": "1",
+        "position": "8",
         "createdAt": "2026-06-13T08:58:05.000Z"
+      },
+      {
+        "id": "dd112233-44bb-ccdd-eeff-998877665544",
+        "columnId": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
+        "title": "Write Documentation",
+        "content": "Update README parameters.",
+        "position": "8v",
+        "createdAt": "2026-06-13T09:02:11.000Z"
       }
     ]
   }
@@ -589,6 +619,8 @@ Authenticates the profile credentials. Accounts that haven't passed the OTP veri
 
 #### 🔹 Update / Move a Task Card
 
+Used to update card text or shift positions within a board (same column or cross-column drag). For positional displacement, send the structural boundaries (prevRank and nextRank) instead of manual indexing parameters.
+
 - **Endpoint**: `PATCH /api/cards/:id`
 - **Auth Required**: Yes
 - **Request Body (Partial Update)**:
@@ -596,11 +628,38 @@ Authenticates the profile credentials. Accounts that haven't passed the OTP veri
 ```json
 {
   "title": "Updated Task Title",
-  "position": "2"
+  "columnId": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
+  "prevRank": "8",
+  "nextRank": "8v"
 }
 ```
 
-- **Triggered Side Effect**: Broadcasts `card_moved` if `columnId` or `position` is modified. Otherwise, broadcasts `card_updated`.
+> ⚙️ **Lexorank Rules**:
+>
+> - **Move to absolute top**: Set prevRank: null, pass the current top card rank to nextRank.
+> - **Move to absolute bottom**: Pass the current bottom card rank to prevRank, set nextRank: null.
+> - **Insert in-between**: Pass the rank string of the card directly above to prevRank and the card directly below to nextRank.
+
+- **Success Response (200 OK)**:
+
+```json
+{
+  "status": "success",
+  "message": "Card updated successfully",
+  "data": {
+    "card": {
+      "id": "cc987654-32ba-cdba-feea-1234567890ab",
+      "columnId": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
+      "title": "Updated Task Title",
+      "content": "Integrate real-time capabilities via socket.io gateway.",
+      "position": "8h",
+      "createdAt": "2026-06-13T08:58:05.000Z"
+    }
+  }
+}
+```
+
+- **Triggered Side Effect**: Broadcasts `card_moved` if columnId, prevRank, or nextRank is processed. Otherwise, broadcasts `card_updated`.
 
 #### 🔹 Delete a Task Card
 
@@ -618,7 +677,7 @@ Authenticates the profile credentials. Accounts that haven't passed the OTP veri
       "columnId": "aa123b45-12bc-34de-56fg-78hijk90l1m2",
       "title": "Setup WebSocket Implementation",
       "content": "Integrate real-time capabilities via socket.io gateway.",
-      "position": "1"
+      "position": "8"
     }
   }
 }
