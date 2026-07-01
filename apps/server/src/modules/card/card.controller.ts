@@ -1,12 +1,12 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { eq } from 'drizzle-orm';
+import { eq, desc, asc } from 'drizzle-orm';
 import { cards } from '@termiboard/core';
+import { getRankBetween } from '../../utils/lexorank.ts';
 
 interface CreateCardBody {
   columnId: string;
   title: string;
   content?: string;
-  position: string;
 }
 
 interface GetCardsParams {
@@ -18,6 +18,8 @@ interface UpdateCardBody {
   title?: string;
   content?: string;
   position?: string;
+  prevRank?: string | null;
+  nextRank?: string | null;
 }
 
 interface CardParams {
@@ -26,11 +28,29 @@ interface CardParams {
 
 // Handler to Create a Card
 export const createCardHandler = async (request: FastifyRequest, reply: FastifyReply) => {
-  const { columnId, title, content, position } = request.body as CreateCardBody;
+  const { columnId, title, content } = request.body as CreateCardBody;
   const { db, io } = request.server;
 
   try {
     const boardId = (request as any).boardId;
+
+    // Take the card that is currently at the bottom of the column
+    const lastCardResult = await db
+      .select({ position: cards.position })
+      .from(cards)
+      .where(eq(cards.columnId, columnId))
+      .orderBy(desc(cards.position)) // Sort from largest/lowest
+      .limit(1);
+
+    let initialPosition: string;
+
+    if (lastCardResult.length > 0) {
+      // If there is a previous card, create a new rank below the last card
+      initialPosition = getRankBetween(lastCardResult[0].position, null);
+    } else {
+      // If the column is still empty, create a default middle value
+      initialPosition = getRankBetween(null, null);
+    }
 
     const newCard = await db
       .insert(cards)
@@ -38,7 +58,7 @@ export const createCardHandler = async (request: FastifyRequest, reply: FastifyR
         columnId,
         title,
         content: content || null,
-        position,
+        position: initialPosition,
       })
       .returning();
 
@@ -67,7 +87,7 @@ export const getCardsByColumnHandler = async (request: FastifyRequest, reply: Fa
   const { db } = request.server;
 
   try {
-    const columnCards = await db.select().from(cards).where(eq(cards.columnId, columnId));
+    const columnCards = await db.select().from(cards).where(eq(cards.columnId, columnId)).orderBy(asc(cards.position));
 
     return reply.status(200).send({
       status: 'success',
@@ -87,7 +107,7 @@ export const getCardsByColumnHandler = async (request: FastifyRequest, reply: Fa
 // Handler to Update / Move a Card
 export const updateCardHandler = async (request: FastifyRequest, reply: FastifyReply) => {
   const { id } = request.params as CardParams;
-  const { columnId, title, content, position } = request.body as UpdateCardBody;
+  const { columnId, title, content, position, prevRank, nextRank } = request.body as UpdateCardBody;
   const { db, io } = request.server;
 
   try {
@@ -102,59 +122,25 @@ export const updateCardHandler = async (request: FastifyRequest, reply: FastifyR
     let targetColumnId = columnId || currentCard.columnId;
     let updatedCardData = currentCard;
 
-    // If there is a POSITION or COLUMNS change, run a full re-indexing logic
-    if (position !== undefined || columnId !== undefined) {
-      const targetPos = position !== undefined ? parseInt(String(position), 10) : 1;
-
-      // Take all the cards in the target column (except the card currently being shifted)
-      const existingCards = await db.select().from(cards).where(eq(cards.columnId, targetColumnId));
-
-      const filteredCards = existingCards
-        .filter((c) => c.id !== id)
-        .sort((a, b) => parseInt(a.position, 10) - parseInt(b.position, 10));
-
-      // Insert the currently shifted card into its new position (index)
-      const insertIndex = Math.max(0, targetPos - 1);
-      filteredCards.splice(insertIndex, 0, {
-        ...currentCard,
+    // Check if there is a POSITION or COLUMNS change
+    if (position !== undefined || columnId !== undefined || prevRank !== undefined || nextRank !== undefined) {
+      const updatePayload: any = {
         columnId: targetColumnId,
-      });
+      };
 
-      // Perform a batch update to the database to ensure a clean position (1, 2, 3, etc.) without duplicates
-      await db.transaction(async (tx) => {
-        for (const [index, item] of filteredCards.entries()) {
-          const newPosStr = String(index + 1);
+      if (title !== undefined) updatePayload.title = title;
+      if (content !== undefined) updatePayload.content = content;
 
-          // If this is the card being shifted, also update the title & content if there is any data submission
-          const updatePayload: any = {
-            columnId: targetColumnId,
-            position: newPosStr,
-          };
-          if (item.id === id) {
-            if (title !== undefined) updatePayload.title = title;
-            if (content !== undefined) updatePayload.content = content;
-          }
+      // Calculate the new fractional string position using Lexorank
+      if (prevRank !== undefined || nextRank !== undefined) {
+        updatePayload.position = getRankBetween(prevRank, nextRank);
+      } else if (position !== undefined) {
+        updatePayload.position = position;
+      }
 
-          const res = await tx.update(cards).set(updatePayload).where(eq(cards.id, item.id)).returning();
+      const res = await db.update(cards).set(updatePayload).where(eq(cards.id, id)).returning();
 
-          if (item.id === id) {
-            updatedCardData = res[0];
-          }
-        }
-
-        // If the card moves from another column, clean & rearrange the original column as well so there are no holes in the sequence
-        if (columnId && columnId !== currentCard.columnId) {
-          const rawSourceCards = await tx.select().from(cards).where(eq(cards.columnId, currentCard.columnId));
-          const sourceCards = rawSourceCards.sort((a, b) => parseInt(a.position, 10) - parseInt(b.position, 10));
-
-          for (const [index, cardItem] of sourceCards.entries()) {
-            await tx
-              .update(cards)
-              .set({ position: String(index + 1) })
-              .where(eq(cards.id, cardItem.id));
-          }
-        }
-      });
+      updatedCardData = res[0];
 
       // BROADCAST EVENT: Notify that a card is moved
       io.to(boardId).emit('card_moved', updatedCardData);

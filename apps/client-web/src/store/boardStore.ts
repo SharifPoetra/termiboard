@@ -36,7 +36,12 @@ interface BoardActions {
 
   // Drag and Drop Internal Handler
   moveCard: (cardId: string, targetId: string) => Promise<void>;
-  persistCardPosition: (cardId: string, targetColumnId: string, newPosition: string) => Promise<void>;
+  persistCardPosition: (
+    cardId: string,
+    targetColumnId: string,
+    prevRank: string | null,
+    nextRank: string | null,
+  ) => Promise<void>;
 
   // Real-time WS Sync Mutators
   syncUpdateBoard: (board: Board) => void;
@@ -161,7 +166,7 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
   fetchCards: async (columnId) => {
     try {
       const response = await axiosInstance.get(`/cards/${columnId}`);
-      const sortedCards = response.data.data.cards.sort((a: Card, b: Card) => Number(a.position) - Number(b.position));
+      const sortedCards = response.data.data.cards.sort((a: Card, b: Card) => a.position.localeCompare(b.position));
       set((state) => ({
         cards: { ...state.cards, [columnId]: sortedCards },
       }));
@@ -236,6 +241,7 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
     const targetCards = sourceColumnId === targetColumnId ? sourceCards : [...(state.cards[targetColumnId] || [])];
 
     const cleanSource = sourceCards.filter((c) => c.id !== cardId);
+
     let targetIndex = targetCards.findIndex((c) => c.id === targetId);
     if (targetIndex === -1) targetIndex = targetCards.length;
 
@@ -247,21 +253,19 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
       if (currentIndex === targetIndex) return; // Prevent unnecessary re-renders if position unchanged
 
       cleanSource.splice(targetIndex, 0, updatedCard);
-      // Re-index array indices to sequential normalized strings (1-based position property)
-      const finalCards = cleanSource.map((c, idx) => ({ ...c, position: String(idx + 1) }));
-
-      set({ cards: { ...state.cards, [sourceColumnId]: finalCards } });
+      set({ cards: { ...state.cards, [sourceColumnId]: cleanSource } });
     } else {
       // Handling structural lane crossing movement between two different columns
-      targetCards.splice(targetIndex, 0, updatedCard);
-      const finalSource = cleanSource.map((c, idx) => ({ ...c, position: String(idx + 1) }));
-      const finalTarget = targetCards.map((c, idx) => ({ ...c, position: String(idx + 1) }));
+      const mutableTarget = [...targetCards];
+      let crossTargetIndex = mutableTarget.findIndex((c) => c.id === targetId);
+      if (crossTargetIndex === -1) crossTargetIndex = mutableTarget.length;
 
+      mutableTarget.splice(crossTargetIndex, 0, updatedCard);
       set({
         cards: {
           ...state.cards,
-          [sourceColumnId]: finalSource,
-          [targetColumnId]: finalTarget,
+          [sourceColumnId]: cleanSource,
+          [targetColumnId]: mutableTarget,
         },
       });
     }
@@ -269,11 +273,12 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
 
   // Database synchronization provider to persist final ordering matrix
   // PATCH /api/cards/:id
-  persistCardPosition: async (cardId, targetColumnId, newPosition) => {
+  persistCardPosition: async (cardId, targetColumnId, prevRank, nextRank) => {
     try {
       await axiosInstance.patch(`/cards/${cardId}`, {
         columnId: targetColumnId,
-        position: newPosition,
+        prevRank,
+        nextRank,
       });
     } catch (err: any) {
       set({
@@ -321,7 +326,7 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
       return {
         cards: {
           ...state.cards,
-          [card.columnId]: [...columnCards, card].sort((a, b) => Number(a.position) - Number(b.position)),
+          [card.columnId]: [...columnCards, card].sort((a, b) => a.position.localeCompare(b.position)),
         },
       };
     });
@@ -337,7 +342,7 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
 
       const colId = updatedCard.columnId;
       const currentTrack = nextCards[colId] || [];
-      nextCards[colId] = [...currentTrack, updatedCard].sort((a, b) => Number(a.position) - Number(b.position));
+      nextCards[colId] = [...currentTrack, updatedCard].sort((a, b) => a.position.localeCompare(b.position));
 
       return { cards: nextCards };
     });
