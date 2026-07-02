@@ -35,7 +35,7 @@ interface BoardActions {
   deleteCard: (cardId: string) => Promise<void>;
 
   // Drag and Drop Internal Handler
-  moveCard: (cardId: string, targetId: string) => Promise<void>;
+  moveCard: (cardId: string, targetId: string, sourceColumnId: string, targetColumnId: string) => void;
   persistCardPosition: (
     cardId: string,
     targetColumnId: string,
@@ -53,7 +53,7 @@ interface BoardActions {
   syncDeleteCard: (card: Card) => void;
 }
 
-export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
+export const useBoardStore = create<BoardState & BoardActions>((set) => ({
   boards: [],
   currentBoard: null,
   columns: [],
@@ -206,69 +206,57 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
   },
 
   // Local state mutator for instant drag-and-drop feedback
-  moveCard: async (cardId, targetId) => {
-    const state = get();
-    let sourceColumnId = '';
-    let targetColumnId = '';
-    let cardToMove: Card | null = null;
+  moveCard: (cardId, targetId, sourceColumnId, targetColumnId) => {
+    set((state) => {
+      const sourceCards = state.cards[sourceColumnId] || [];
+      const targetCards = state.cards[targetColumnId] || [];
 
-    // Locate the source column and the specific card being dragged
-    Object.keys(state.cards).forEach((colId) => {
-      const found = state.cards[colId].find((c) => c.id === cardId);
-      if (found) {
-        sourceColumnId = colId;
-        cardToMove = found;
+      const cardToMove = sourceCards.find((c) => c.id === cardId) || targetCards.find((c) => c.id === cardId);
+      if (!cardToMove) return state;
+
+      // Scenario 1: Intra-column movement (Same column boundary)
+      if (sourceColumnId === targetColumnId) {
+        const currentIndex = sourceCards.findIndex((c) => c.id === cardId);
+        const targetIndex = sourceCards.findIndex((c) => c.id === targetId);
+
+        if (currentIndex === -1 || targetIndex === -1 || currentIndex === targetIndex) return state;
+
+        const mutableCards = [...sourceCards];
+        const [movedCard] = mutableCards.splice(currentIndex, 1);
+        mutableCards.splice(targetIndex, 0, movedCard);
+
+        return {
+          cards: {
+            ...state.cards,
+            [sourceColumnId]: mutableCards,
+          },
+        };
       }
-    });
 
-    if (!cardToMove || !sourceColumnId) return;
-    const activeCard: Card = cardToMove;
+      // Scenario 2: Inter-column movement (Cross-column boundary dispatch)
+      const cleanSource = sourceCards.filter((c) => c.id !== cardId);
 
-    // Determine the target column (targetId could be a column ID or another card ID)
-    if (state.cards[targetId]) {
-      targetColumnId = targetId;
-    } else {
-      Object.keys(state.cards).forEach((colId) => {
-        if (state.cards[colId].some((c) => c.id === targetId)) {
-          targetColumnId = colId;
-        }
-      });
-    }
+      // Filter out the card if it already sneaked into the target slice via asynchronous updates
+      const cleanTarget = targetCards.filter((c) => c.id !== cardId);
+      const mutableTarget = [...cleanTarget];
 
-    if (!targetColumnId) return;
-
-    const sourceCards = [...(state.cards[sourceColumnId] || [])];
-    const targetCards = sourceColumnId === targetColumnId ? sourceCards : [...(state.cards[targetColumnId] || [])];
-
-    const cleanSource = sourceCards.filter((c) => c.id !== cardId);
-
-    let targetIndex = targetCards.findIndex((c) => c.id === targetId);
-    if (targetIndex === -1) targetIndex = targetCards.length;
-
-    const updatedCard = { ...activeCard, columnId: targetColumnId };
-
-    // Handling sorting transformation inside the exact same column
-    if (sourceColumnId === targetColumnId) {
-      const currentIndex = sourceCards.findIndex((c) => c.id === cardId);
-      if (currentIndex === targetIndex) return; // Prevent unnecessary re-renders if position unchanged
-
-      cleanSource.splice(targetIndex, 0, updatedCard);
-      set({ cards: { ...state.cards, [sourceColumnId]: cleanSource } });
-    } else {
-      // Handling structural lane crossing movement between two different columns
-      const mutableTarget = [...targetCards];
+      // Fallback to bottom append if target anchoring element is absent or matches container ID
       let crossTargetIndex = mutableTarget.findIndex((c) => c.id === targetId);
-      if (crossTargetIndex === -1) crossTargetIndex = mutableTarget.length;
+      if (crossTargetIndex === -1) {
+        crossTargetIndex = mutableTarget.length;
+      }
 
+      const updatedCard = { ...cardToMove, columnId: targetColumnId };
       mutableTarget.splice(crossTargetIndex, 0, updatedCard);
-      set({
+
+      return {
         cards: {
           ...state.cards,
           [sourceColumnId]: cleanSource,
           [targetColumnId]: mutableTarget,
         },
-      });
-    }
+      };
+    });
   },
 
   // Database synchronization provider to persist final ordering matrix
@@ -334,16 +322,21 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
 
   syncUpdateCard: (updatedCard) => {
     set((state) => {
+      const colId = updatedCard.columnId;
+      const existing = state.cards[colId]?.find((c) => c.id === updatedCard.id);
+
+      // Skip update if data is identical (prevents repeated re-rendering of duplicate events)
+      if (existing && JSON.stringify(existing) === JSON.stringify(updatedCard)) {
+        return state;
+      }
+
       // Evacuate card if it shifted column paths externally via WS stream frames
       const nextCards = { ...state.cards };
-      Object.keys(nextCards).forEach((colId) => {
-        nextCards[colId] = nextCards[colId].filter((c) => c.id !== updatedCard.id);
+      Object.keys(nextCards).forEach((cid) => {
+        nextCards[cid] = nextCards[cid].filter((c) => c.id !== updatedCard.id);
       });
-
-      const colId = updatedCard.columnId;
       const currentTrack = nextCards[colId] || [];
       nextCards[colId] = [...currentTrack, updatedCard].sort((a, b) => a.position.localeCompare(b.position));
-
       return { cards: nextCards };
     });
   },

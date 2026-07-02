@@ -8,7 +8,6 @@ import { InviteUserModal } from '../../../components/ui/InviteUserModal';
 import { CardItem } from '../components/CardItem';
 import { Card } from '@termiboard/core';
 import { ArrowLeft, Plus, Terminal, LayoutGrid, Edit2, Trash2, UserPlus, MoreVertical } from 'lucide-react';
-
 import {
   DndContext,
   DragStartEvent,
@@ -19,6 +18,8 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  rectIntersection,
+  pointerWithin,
 } from '@dnd-kit/core';
 
 interface BoardDetailPageProps {
@@ -55,14 +56,16 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [activeCard, setActiveCard] = useState<Card | null>(null);
 
-  // State and ref tracking for the mobile action dropdown
+  // Transient state for drag animations to prevent infinite render loops from Zustand dispatches
+  const [localCards, setLocalCards] = useState<Record<string, Card[]>>(() => useBoardStore.getState().cards);
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Guard flag to temporarily ignore incoming echo reflections from WS during local dragging
+  // Guard flag to block incoming WebSocket updates during local dragging calculations
   const isLocallyDragging = useRef(false);
 
-  // Isolate native clicks and text selections from mobile/pointer panning gestures
+  // Delay gesture activation to preserve native mobile/pointer scroll and text selection
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
@@ -77,12 +80,18 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     setCurrentBoard(active);
   }, [boardId, boards, setCurrentBoard]);
 
+  // Re-sync local view only on mounting or external stream updates, ignored while dragging
+  useEffect(() => {
+    if (isLocallyDragging.current) return;
+    setLocalCards(cards);
+  }, [cards]);
+
   const onBackToDashboardRef = useRef(onBackToDashboard);
   useEffect(() => {
     onBackToDashboardRef.current = onBackToDashboard;
   }, [onBackToDashboard]);
 
-  // Intercept click signals outside the viewport boundaries to close the dropdown
+  // Collapse responsive action menu when clicking outside boundaries
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -95,9 +104,11 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
 
   const socket = useSocket({ boardId });
 
-  // Secure real-time WebSocket event broker stream gateway
+  // Real-time WebSocket event pipeline listener
   useEffect(() => {
     if (!socket) return;
+    console.log('[DEBUG] Registering listeners on socket id:', socket.id);
+    console.log('[DEBUG] card_moved listener count BEFORE:', socket.listeners('card_moved').length);
 
     socket.on('board_updated', (payload) => {
       console.log('[WS_STREAM] Incoming frame payload: board_updated');
@@ -147,6 +158,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
       syncDeleteCard(payload);
     });
 
+    console.log('[DEBUG] card_moved listener count AFTER:', socket.listeners('card_moved').length);
     return () => {
       socket.off('board_deleted');
       socket.off('board_updated');
@@ -160,9 +172,11 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     };
   }, [socket, syncAddColumn, syncUpdateColumn, syncDeleteColumn, syncAddCard, syncUpdateCard, syncDeleteCard]);
 
+  const EMPTY_CARDS: Card[] = [];
+
   const handleDeleteBoardClick = () => {
     setIsConfirmOpen(true);
-    setDropdownOpen(false); // Close dropdown upon triggering modal
+    setDropdownOpen(false);
   };
 
   const handleExecuteUpdateBoard = async (name: string, description: string) => {
@@ -202,7 +216,6 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
 
   const handleDragStart = (event: DragStartEvent) => {
     isLocallyDragging.current = true;
-
     const cardId = String(event.active.id);
     let foundCard: Card | null = null;
 
@@ -214,82 +227,98 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     setActiveCard(foundCard);
   };
 
+  // Rearrange local state instantly to trigger visual shifts without hitting Zustand store mid-flight
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
     if (!over) return;
 
     const cardId = String(active.id);
     const overId = String(over.id);
+    if (cardId === overId) return;
 
-    let activeColumnId: string | null = null;
-    Object.keys(cards).forEach((colId) => {
-      if (cards[colId].some((c) => c.id === cardId)) {
-        activeColumnId = colId;
+    const activeColumnId = String(active.data.current?.columnId ?? '');
+
+    let overColumnId: string | null = null;
+    if (over.data.current?.type === 'Column') {
+      overColumnId = overId;
+    } else if (over.data.current?.type === 'Card') {
+      overColumnId = String(over.data.current.columnId);
+    }
+
+    if (!activeColumnId || !overColumnId) return;
+
+    setLocalCards((prev) => {
+      const sourceCards = prev[activeColumnId] || [];
+      const targetCards = prev[overColumnId!] || [];
+      const cardToMove = sourceCards.find((c) => c.id === cardId);
+      if (!cardToMove) return prev;
+
+      if (activeColumnId !== overColumnId) {
+        const cleanSource = sourceCards.filter((c) => c.id !== cardId);
+        const mutableTarget = targetCards.filter((c) => c.id !== cardId);
+        let targetIndex = mutableTarget.findIndex((c) => c.id === overId);
+        if (targetIndex === -1) targetIndex = mutableTarget.length;
+
+        // Prevent updates if the actual position does not change.
+        const alreadyAtIndex = targetCards.findIndex((c) => c.id === cardId) === targetIndex;
+        if (alreadyAtIndex) return prev;
+
+        mutableTarget.splice(targetIndex, 0, { ...cardToMove, columnId: overColumnId });
+        return { ...prev, [activeColumnId]: cleanSource, [overColumnId!]: mutableTarget };
+      } else {
+        const currentIndex = sourceCards.findIndex((c) => c.id === cardId);
+        const targetIndex = sourceCards.findIndex((c) => c.id === overId);
+        if (currentIndex === -1 || targetIndex === -1 || currentIndex === targetIndex) return prev;
+
+        const mutableCards = [...sourceCards];
+        const [movedCard] = mutableCards.splice(currentIndex, 1);
+        mutableCards.splice(targetIndex, 0, movedCard);
+        return { ...prev, [activeColumnId]: mutableCards };
       }
     });
-
-    let overColumnId: string | null = overId;
-    if (!columns.some((col) => col.id === overId)) {
-      Object.keys(cards).forEach((colId) => {
-        if (cards[colId].some((c) => c.id === overId)) {
-          overColumnId = colId;
-        }
-      });
-    }
-
-    // Only update state if card crosses lanes to prevent infinite loop crashes inside the same column
-    if (activeColumnId && overColumnId && activeColumnId !== overColumnId) {
-      moveCard(cardId, overId);
-    }
   };
 
+  // Run single atomic commit on element release: Sync Zustand state, recalculate Lexorank, flush to backend
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-
     setActiveCard(null);
     isLocallyDragging.current = false;
-    if (!over) return;
+
+    if (!over) {
+      setLocalCards(useBoardStore.getState().cards);
+      return;
+    }
 
     const cardId = String(active.id);
     const targetId = String(over.id);
+    const sourceColumnId = String(active.data.current?.columnId ?? '');
 
-    // Resolve the target column ID whether dropped over a column area or a card object
-    let finalColumnId = targetId;
-    if (!cards[targetId]) {
-      Object.keys(cards).forEach((colId) => {
-        if (cards[colId].some((c) => c.id === targetId)) {
-          finalColumnId = colId;
-        }
-      });
+    let targetColumnId = sourceColumnId;
+    if (over.data.current?.type === 'Column') {
+      targetColumnId = targetId;
+    } else if (over.data.current?.type === 'Card') {
+      targetColumnId = String(over.data.current.columnId);
     }
 
-    // Always trigger local mutation to sync layout states first
-    moveCard(cardId, targetId);
+    moveCard(cardId, targetId, sourceColumnId, targetColumnId);
 
-    // Fetch snapshot of the freshly mutated track directly from state
-    const currentList = useBoardStore.getState().cards[finalColumnId] || [];
-
-    // Locate the exact physical placement index where the card ended up
+    const currentList = localCards[targetColumnId] || [];
     const finalIndex = currentList.findIndex((c) => c.id === cardId);
 
     if (finalIndex !== -1) {
       const prevCard = currentList[finalIndex - 1];
       const nextCard = currentList[finalIndex + 1];
-
-      // Take the string position value as the upper/lower bound rank
-      const prevRank = prevCard ? prevCard.position : null;
-      const nextRank = nextCard ? nextCard.position : null;
       try {
-        await persistCardPosition(cardId, finalColumnId, prevRank, nextRank);
+        await persistCardPosition(cardId, targetColumnId, prevCard?.position ?? null, nextCard?.position ?? null);
       } catch (err) {
         console.error('Database sync deferred:', err);
+        setLocalCards(useBoardStore.getState().cards);
       }
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-mono flex flex-col selection:bg-emerald-500/30 overflow-x-auto">
-      {/* DASHBOARD WORKSPACE HEADER NAVBAR */}
       <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-6 py-3 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3 min-w-0">
           <button
@@ -304,7 +333,6 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
               BOARD // {currentBoard ? currentBoard.name : `${boardId.substring(0, 8)}...`}
             </span>
 
-            {/* HIDDEN ON MOBILE: Desktop individual button array actions */}
             <button
               onClick={() => setEditModalOpen(true)}
               className="hidden md:inline-block text-slate-500 hover:text-cyan-400 bg-transparent border-none p-0.5 cursor-pointer transition-colors"
@@ -323,7 +351,6 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
         </div>
 
         <div className="flex items-center gap-3">
-          {/* HIDDEN ON MOBILE: Desktop invite collaborator trigger */}
           <button
             onClick={() => setInviteModalOpen(true)}
             className="hidden md:flex bg-slate-950 border border-slate-800 hover:border-emerald-500/40 text-slate-400 hover:text-emerald-400 px-2.5 py-1 rounded text-xs items-center gap-1.5 transition-all duration-150 cursor-pointer uppercase font-bold"
@@ -337,7 +364,6 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
             <span>LIVE SYNC</span>
           </div>
 
-          {/* MOBILE ACTION DROPDOWN: Aggregates Invite, Edit, and Delete in responsive viewports */}
           <div className="relative md:hidden" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -381,14 +407,24 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
         </div>
       </header>
 
-      {/* HORIZONTAL BOARD GRID RUNTIME PANELS */}
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        collisionDetection={(args) => {
+          // Smart intersection fallback when component centers misalign during rapid sweeping movements
+          const defaultCollisions = rectIntersection(args);
+          if (defaultCollisions.length > 0) return defaultCollisions;
+          return pointerWithin(args);
+        }}
+      >
         <main className="flex-1 p-4 md:p-6 overflow-x-auto flex items-start gap-4 custom-scrollbar select-none">
-          {columns.map((column) => (
-            <ColumnContainer key={column.id} column={column} />
-          ))}
+          {columns.map((column) => {
+            const columnCards = localCards[column.id] ?? EMPTY_CARDS;
+            return <ColumnContainer key={column.id} column={column} localCards={columnCards} />;
+          })}
 
-          {/* COMPONENT CREATION FOR NEW COLUMNS */}
           <div className="w-72 sm:w-80 shrink-0">
             {isAddingColumn ? (
               <form

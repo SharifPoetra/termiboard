@@ -4,14 +4,15 @@ import { useBoardStore } from '../../../store/boardStore';
 import { CardItem } from './CardItem';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { Plus, PlusCircle, Trash2 } from 'lucide-react';
-import { useSortable } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
 interface ColumnContainerProps {
   column: Column;
+  localCards?: Card[];
 }
 
-export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
+export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column, localCards }) => {
   if (!column) return null;
 
   const { cards, fetchCards, createCard, updateColumn, deleteColumn } = useBoardStore();
@@ -26,8 +27,12 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   // dnd-kit droppable connection to make this column container targetable by dragged items
-  const { setNodeRef } = useSortable({
+  const { setNodeRef } = useDroppable({
     id: column.id,
+    data: {
+      type: 'Column',
+      columnId: column.id,
+    },
   });
 
   // Sync internal input state whenever column name is mutated from external WS stream
@@ -36,12 +41,12 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
   }, [column.name]);
 
   useEffect(() => {
-    if (column.id) {
+    if (column.id && !useBoardStore.getState().cards[column.id]) {
       fetchCards(column.id);
     }
-  }, [column.id, fetchCards]);
+  }, [column.id]);
 
-  const columnCards = cards[column.id] || [];
+  const columnCards = localCards || cards[column.id] || [];
 
   // Extract clean array of primitive IDs required by SortableContext strategy to map items correctly
   const cardIds = columnCards.map((c) => c.id);
@@ -141,11 +146,9 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column }) => {
 
       {/* TASK CARDS STREAM LIST */}
       <div className="flex-1 p-3 overflow-y-auto space-y-2 custom-scrollbar bg-slate-900/30">
-        <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
+        <SortableContext id={column.id} items={cardIds} strategy={verticalListSortingStrategy}>
           {columnCards.map((card: Card) => (
-            <div key={card.id} className="relative">
-              <CardItem card={card} />
-            </div>
+            <CardItem key={card.id} card={card} />
           ))}
         </SortableContext>
 

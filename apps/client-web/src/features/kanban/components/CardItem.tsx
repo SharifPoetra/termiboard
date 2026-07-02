@@ -12,14 +12,21 @@ interface CardItemProps {
   isOverlay?: boolean;
 }
 
-export const CardItem: React.FC<CardItemProps> = ({ card, isOverlay = false }) => {
+export const CardItem: React.FC<CardItemProps> = React.memo(({ card, isOverlay = false }) => {
   const { updateCard, deleteCard } = useBoardStore();
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   // Connect component to dnd-kit sortable engine, disabling it if used inside DragOverlay
-  const sortable = useSortable({ id: card.id, disabled: isOverlay });
+  const sortable = useSortable({
+    id: card.id,
+    disabled: isOverlay,
+    data: {
+      type: 'Card',
+      columnId: card.columnId,
+    },
+  });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
 
   const style = {
@@ -138,4 +145,6 @@ export const CardItem: React.FC<CardItemProps> = ({ card, isOverlay = false }) =
       )}
     </div>
   );
-};
+});
+
+CardItem.displayName = 'CardItem';
