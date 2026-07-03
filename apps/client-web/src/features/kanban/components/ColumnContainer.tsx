@@ -95,7 +95,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column, localC
   return (
     <div
       ref={ref}
-      className="bg-slate-900 border-slate-800 rounded flex flex-col max-h-[75vh] w-72 sm:w-80 shrink-0 shadow-md font-mono"
+      className="bg-slate-900 border border-slate-800 rounded flex flex-col max-h-[75vh] w-72 sm:w-80 shrink-0 shadow-md font-mono"
     >
       <div className="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-900/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2">
@@ -107,7 +107,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column, localC
               onChange={(e) => setColumnName(e.target.value)}
               onBlur={handleUpdateColumnName}
               onKeyDown={(e) => e.key === 'Enter' && handleUpdateColumnName()}
-              className="bg-slate-950 border-emerald-500 rounded px-1.5 py-0.5 text-xs font-bold text-slate-100 uppercase focus:outline-none w-full"
+              className="bg-slate-950 border border-emerald-500 rounded px-1.5 py-0.5 text-xs font-bold text-slate-100 uppercase focus:outline-none w-full"
               autoFocus
             />
           ) : (
@@ -119,7 +119,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column, localC
               <span className="truncate">{column.name}</span>
             </h3>
           )}
-          <span className="text- text-slate-500 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 shrink-0">
+          <span className="text-[10px] text-slate-500 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 shrink-0">
             {columnCards.length}
           </span>
         </div>
@@ -138,20 +138,20 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column, localC
         ))}
 
         {columnCards.length === 0 && !isAdding && (
-          <p className="text- text-slate-600 text-center py-4 uppercase tracking-wider">[ Column Empty ]</p>
+          <p className="text-[10px] text-slate-600 text-center py-4 uppercase tracking-wider">[ Column Empty ]</p>
         )}
 
         {isAdding && (
           <form
             onSubmit={handleAddCard}
-            className="bg-slate-950 border-emerald-500/30 p-3 rounded space-y-2 shadow-inner"
+            className="bg-slate-950 border border-emerald-500/30 p-3 rounded space-y-2 shadow-inner"
           >
             <input
               type="text"
               placeholder="Task title..."
               value={cardTitle}
               onChange={(e) => setCardTitle(e.target.value)}
-              className="w-full bg-slate-900 border-slate-800 rounded px-2 py-1 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+              className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
               autoFocus
               disabled={isSubmitting}
             />
@@ -159,21 +159,21 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column, localC
               placeholder="Task description..."
               value={cardContent}
               onChange={(e) => setCardContent(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text- text-slate-300 focus:outline-none focus:border-emerald-500 transition-colors h-14 resize-none"
+              className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-emerald-500 transition-colors h-14 resize-none"
               disabled={isSubmitting}
             />
             <div className="flex items-center gap-2 justify-end pt-1">
               <button
                 type="button"
                 onClick={() => setIsAdding(false)}
-                className="text- uppercase tracking-wider text-slate-500 hover:text-slate-400 bg-transparent border-none cursor-pointer"
+                className="text-[10px] uppercase tracking-wider text-slate-500 hover:text-slate-400 bg-transparent border-none cursor-pointer"
                 disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="text- uppercase bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-2.5 py-1 rounded cursor-pointer transition-colors flex items-center gap-1"
+                className="text-[10px] uppercase bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-2.5 py-1 rounded cursor-pointer transition-colors flex items-center gap-1"
                 disabled={isSubmitting || !cardTitle.trim()}
               >
                 <Plus size={10} /> Add
@@ -187,7 +187,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column, localC
         <div className="p-2 border-t border-slate-800/40 bg-slate-900/50">
           <button
             onClick={() => setIsAdding(true)}
-            className="w-full py-1.5 rounded border-dashed border-slate-800 hover:border-slate-700 text- uppercase tracking-wider text-slate-500 hover:text-slate-300 flex items-center justify-center gap-1 bg-transparent cursor-pointer transition-colors"
+            className="w-full py-1.5 rounded border border-dashed border-slate-800 hover:border-slate-700 text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300 flex items-center justify-center gap-1 bg-transparent cursor-pointer transition-colors"
           >
             <PlusCircle size={12} /> Add Task Card
           </button>
