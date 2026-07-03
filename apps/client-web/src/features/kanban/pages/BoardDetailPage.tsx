@@ -30,7 +30,6 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     fetchColumns,
     createColumn,
     updateBoard,
-    moveCard,
     persistCardPosition,
     syncUpdateBoard,
     syncAddColumn,
