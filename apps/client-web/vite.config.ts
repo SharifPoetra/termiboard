@@ -6,4 +6,10 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   base: '/',
   plugins: [react(), tailwindcss()],
+  server: {
+    forwardConsole: {
+      unhandledErrors: true,
+      logLevels: ['log', 'warn', 'error']
+    }
+  }
 });
