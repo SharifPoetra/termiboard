@@ -3,7 +3,7 @@ import { Card } from '@termiboard/core';
 import { useBoardStore } from '../../../store/boardStore';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { EditCardModal } from '../../../components/ui/EditCardModal';
-import { Calendar, Hash, Edit2, X } from 'lucide-react';
+import { Calendar, Hash, Edit2, X, Loader2 } from 'lucide-react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import { Feedback } from '@dnd-kit/dom';
 import { closestCenter } from '@dnd-kit/collision';
@@ -12,9 +12,10 @@ interface CardItemProps {
   card: Card;
   isOverlay?: boolean;
   index?: number;
+  isPersisting?: boolean;
 }
 
-export const CardItem: React.FC<CardItemProps> = React.memo(({ card, isOverlay = false, index = 0 }) => {
+export const CardItem: React.FC<CardItemProps> = React.memo(({ card, isOverlay = false, index = 0, isPersisting }) => {
   const { updateCard, deleteCard } = useBoardStore();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -34,7 +35,6 @@ export const CardItem: React.FC<CardItemProps> = React.memo(({ card, isOverlay =
   // Hide original element during drag, only show overlay
   const style = {
     opacity: isDragging && !isOverlay ? 0 : 1,
-    touchAction: 'none',
   };
 
   const handleSaveCardData = async (newTitle: string, newContent: string) => {
@@ -94,20 +94,26 @@ export const CardItem: React.FC<CardItemProps> = React.memo(({ card, isOverlay =
           onTouchStart={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            onClick={() => setIsEditOpen(true)}
-            className="text-slate-500 hover:text-emerald-400 p-1 rounded bg-slate-900 border border-slate-800 cursor-pointer shadow-sm transition-colors"
-            title="Edit Task"
-          >
-            <Edit2 size={10} />
-          </button>
-          <button
-            onClick={() => setIsConfirmOpen(true)}
-            className="text-slate-400 hover:text-red-400 p-1 rounded bg-slate-900 border border-slate-800 cursor-pointer shadow-sm transition-colors"
-            title="Delete Task"
-          >
-            <X size={11} />
-          </button>
+          {isPersisting ? (
+            <Loader2 size={14} className="text-emerald-400 animate-spin" />
+          ) : (
+            <>
+              <button
+                onClick={() => setIsEditOpen(true)}
+                className="text-slate-500 hover:text-emerald-400 p-1 rounded bg-slate-900 border border-slate-800 cursor-pointer shadow-sm transition-colors"
+                title="Edit Task"
+              >
+                <Edit2 size={10} />
+              </button>
+              <button
+                onClick={() => setIsConfirmOpen(true)}
+                className="text-slate-400 hover:text-red-400 p-1 rounded bg-slate-900 border border-slate-800 cursor-pointer shadow-sm transition-colors"
+                title="Delete Task"
+              >
+                <X size={11} />
+              </button>
+            </>
+          )}
         </div>
       )}
 

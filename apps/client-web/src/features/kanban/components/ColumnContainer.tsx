@@ -10,9 +10,10 @@ import { pointerIntersection } from '@dnd-kit/collision';
 interface ColumnContainerProps {
   column: Column;
   localCards?: Card[];
+  persistingCardId?: string | null;
 }
 
-export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column, localCards }) => {
+export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column, localCards, persistingCardId }) => {
   if (!column) return null;
 
   const { cards, fetchCards, createCard, updateColumn, deleteColumn } = useBoardStore();
@@ -134,7 +135,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({ column, localC
 
       <div className="flex-1 p-3 overflow-y-auto space-y-2 custom-scrollbar bg-slate-900/30">
         {columnCards.map((card, index) => (
-          <CardItem key={card.id} card={card} index={index} />
+          <CardItem key={card.id} card={card} index={index} isPersisting={persistingCardId === card.id} />
         ))}
 
         {columnCards.length === 0 && !isAdding && (
