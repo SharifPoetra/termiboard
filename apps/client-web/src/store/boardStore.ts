@@ -2,6 +2,14 @@ import { create } from 'zustand';
 import axiosInstance from '../lib/axios';
 import { Board, Card, Column } from '@termiboard/core';
 
+const areCardsEqual = (left: Card, right: Card) =>
+  left.id === right.id &&
+  left.columnId === right.columnId &&
+  left.title === right.title &&
+  left.content === right.content &&
+  left.position === right.position &&
+  String(left.createdAt) === String(right.createdAt);
+
 interface BoardState {
   boards: Board[];
   currentBoard: Board | null;
@@ -50,8 +58,36 @@ interface BoardActions {
   syncDeleteColumn: (columnId: string) => void;
   syncAddCard: (card: Card) => void;
   syncUpdateCard: (card: Card) => void;
+  syncUpdateCards: (cards: Card[]) => void;
   syncDeleteCard: (card: Card) => void;
 }
+
+const applyCardUpdates = (currentCards: Record<string, Card[]>, updatedCards: Card[]) => {
+  let nextCards = currentCards;
+
+  updatedCards.forEach((updatedCard) => {
+    const colId = updatedCard.columnId;
+    const existingColumnId =
+      Object.entries(nextCards).find(([, columnCards]) =>
+        columnCards.some((card) => card.id === updatedCard.id),
+      )?.[0] ?? null;
+    const existing = existingColumnId ? nextCards[existingColumnId]?.find((card) => card.id === updatedCard.id) : null;
+
+    if (existingColumnId === colId && existing && areCardsEqual(existing, updatedCard)) return;
+
+    if (nextCards === currentCards) nextCards = { ...currentCards };
+    if (existingColumnId) {
+      nextCards[existingColumnId] = (nextCards[existingColumnId] || []).filter((card) => card.id !== updatedCard.id);
+    }
+
+    const currentTrack = nextCards[colId] || [];
+    nextCards[colId] = [...currentTrack.filter((card) => card.id !== updatedCard.id), updatedCard].sort((a, b) =>
+      a.position.localeCompare(b.position),
+    );
+  });
+
+  return nextCards;
+};
 
 export const useBoardStore = create<BoardState & BoardActions>((set) => ({
   boards: [],
@@ -208,14 +244,19 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
   // Local state mutator for instant drag-and-drop feedback
   moveCard: (cardId, targetId, sourceColumnId, targetColumnId) => {
     set((state) => {
-      const sourceCards = state.cards[sourceColumnId] || [];
+      const currentSourceColumnId = state.cards[sourceColumnId]?.some((card) => card.id === cardId)
+        ? sourceColumnId
+        : (Object.entries(state.cards).find(([, columnCards]) => columnCards.some((card) => card.id === cardId))?.[0] ??
+          sourceColumnId);
+
+      const sourceCards = state.cards[currentSourceColumnId] || [];
       const targetCards = state.cards[targetColumnId] || [];
 
       const cardToMove = sourceCards.find((c) => c.id === cardId) || targetCards.find((c) => c.id === cardId);
       if (!cardToMove) return state;
 
       // Scenario 1: Intra-column movement (Same column boundary)
-      if (sourceColumnId === targetColumnId) {
+      if (currentSourceColumnId === targetColumnId) {
         const currentIndex = sourceCards.findIndex((c) => c.id === cardId);
         const targetIndex = sourceCards.findIndex((c) => c.id === targetId);
 
@@ -228,7 +269,7 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
         return {
           cards: {
             ...state.cards,
-            [sourceColumnId]: mutableCards,
+            [currentSourceColumnId]: mutableCards,
           },
         };
       }
@@ -252,7 +293,7 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
       return {
         cards: {
           ...state.cards,
-          [sourceColumnId]: cleanSource,
+          [currentSourceColumnId]: cleanSource,
           [targetColumnId]: mutableTarget,
         },
       };
@@ -322,21 +363,17 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
 
   syncUpdateCard: (updatedCard) => {
     set((state) => {
-      const colId = updatedCard.columnId;
-      const existing = state.cards[colId]?.find((c) => c.id === updatedCard.id);
+      const nextCards = applyCardUpdates(state.cards, [updatedCard]);
+      if (nextCards === state.cards) return state;
+      return { cards: nextCards };
+    });
+  },
 
-      // Skip update if data is identical (prevents repeated re-rendering of duplicate events)
-      if (existing && JSON.stringify(existing) === JSON.stringify(updatedCard)) {
-        return state;
-      }
-
-      // Evacuate card if it shifted column paths externally via WS stream frames
-      const nextCards = { ...state.cards };
-      Object.keys(nextCards).forEach((cid) => {
-        nextCards[cid] = nextCards[cid].filter((c) => c.id !== updatedCard.id);
-      });
-      const currentTrack = nextCards[colId] || [];
-      nextCards[colId] = [...currentTrack, updatedCard].sort((a, b) => a.position.localeCompare(b.position));
+  syncUpdateCards: (updatedCards) => {
+    if (updatedCards.length === 0) return;
+    set((state) => {
+      const nextCards = applyCardUpdates(state.cards, updatedCards);
+      if (nextCards === state.cards) return state;
       return { cards: nextCards };
     });
   },
