@@ -421,7 +421,10 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <main className="flex-1 p-4 md:p-6 overflow-x-auto flex items-start gap-4 custom-scrollbar select-none touch-pan-y">
+        <main
+          style={{ touchAction: 'pan-x pan-y' }}
+          className="flex-1 p-4 md:p-6 overflow-x-auto flex items-start gap-4 custom-scrollbar select-none"
+        >
           {columns.map((column) => {
             const columnCards = localCards[column.id] ?? EMPTY_CARDS;
             return (
