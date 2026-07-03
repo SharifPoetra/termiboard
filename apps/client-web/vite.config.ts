@@ -9,7 +9,7 @@ export default defineConfig({
   server: {
     forwardConsole: {
       unhandledErrors: true,
-      logLevels: ['log', 'warn', 'error']
-    }
-  }
+      logLevels: ['log', 'warn', 'error'],
+    },
+  },
 });
