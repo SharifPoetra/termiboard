@@ -12,10 +12,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@termiboard/core": "*",
-    "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/helpers": "^0.5.0",
+    "@dnd-kit/react": "^0.5.0",
     "@tailwindcss/vite": "^4.3.1",
+    "@termiboard/core": "*",
     "axios": "^1.18.0",
     "lucide-react": "^1.18.0",
     "react": "^19.2.6",
