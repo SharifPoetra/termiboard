@@ -35,7 +35,6 @@ interface BoardActions {
   deleteCard: (cardId: string) => Promise<void>;
 
   // Drag and Drop Internal Handler
-  moveCard: (cardId: string, targetId: string) => Promise<void>;
   persistCardPosition: (
     cardId: string,
     targetColumnId: string,
@@ -50,10 +49,49 @@ interface BoardActions {
   syncDeleteColumn: (columnId: string) => void;
   syncAddCard: (card: Card) => void;
   syncUpdateCard: (card: Card) => void;
+  syncUpdateCards: (cards: Card[]) => void;
   syncDeleteCard: (card: Card) => void;
 }
 
-export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
+const areCardsEqual = (left: Card, right: Card) => {
+  return (
+    left.id === right.id &&
+    left.columnId === right.columnId &&
+    left.title === right.title &&
+    left.content === right.content &&
+    left.position === right.position &&
+    String(left.createdAt) === String(right.createdAt)
+  );
+};
+
+const applyCardUpdates = (currentCards: Record<string, Card[]>, updatedCards: Card[]) => {
+  let nextCards = currentCards;
+
+  updatedCards.forEach((updatedCard) => {
+    const colId = updatedCard.columnId;
+    const existingColumnId =
+      Object.entries(nextCards).find(([, columnCards]) =>
+        columnCards.some((card) => card.id === updatedCard.id),
+      )?.[0] ?? null;
+    const existing = existingColumnId ? nextCards[existingColumnId]?.find((card) => card.id === updatedCard.id) : null;
+
+    if (existingColumnId === colId && existing && areCardsEqual(existing, updatedCard)) return;
+
+    if (nextCards === currentCards) nextCards = { ...currentCards };
+    if (existingColumnId) {
+      nextCards[existingColumnId] = (nextCards[existingColumnId] || []).filter((card) => card.id !== updatedCard.id);
+    }
+
+    const currentTrack = nextCards[colId] || [];
+    nextCards[colId] = [...currentTrack.filter((card) => card.id !== updatedCard.id), updatedCard].sort((a, b) =>
+      a.position.localeCompare(b.position),
+    );
+  });
+
+  return nextCards;
+};
+
+export const useBoardStore = create<BoardState & BoardActions>((set) => ({
   boards: [],
   currentBoard: null,
   columns: [],
@@ -205,72 +243,6 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
     }
   },
 
-  // Local state mutator for instant drag-and-drop feedback
-  moveCard: async (cardId, targetId) => {
-    const state = get();
-    let sourceColumnId = '';
-    let targetColumnId = '';
-    let cardToMove: Card | null = null;
-
-    // Locate the source column and the specific card being dragged
-    Object.keys(state.cards).forEach((colId) => {
-      const found = state.cards[colId].find((c) => c.id === cardId);
-      if (found) {
-        sourceColumnId = colId;
-        cardToMove = found;
-      }
-    });
-
-    if (!cardToMove || !sourceColumnId) return;
-    const activeCard: Card = cardToMove;
-
-    // Determine the target column (targetId could be a column ID or another card ID)
-    if (state.cards[targetId]) {
-      targetColumnId = targetId;
-    } else {
-      Object.keys(state.cards).forEach((colId) => {
-        if (state.cards[colId].some((c) => c.id === targetId)) {
-          targetColumnId = colId;
-        }
-      });
-    }
-
-    if (!targetColumnId) return;
-
-    const sourceCards = [...(state.cards[sourceColumnId] || [])];
-    const targetCards = sourceColumnId === targetColumnId ? sourceCards : [...(state.cards[targetColumnId] || [])];
-
-    const cleanSource = sourceCards.filter((c) => c.id !== cardId);
-
-    let targetIndex = targetCards.findIndex((c) => c.id === targetId);
-    if (targetIndex === -1) targetIndex = targetCards.length;
-
-    const updatedCard = { ...activeCard, columnId: targetColumnId };
-
-    // Handling sorting transformation inside the exact same column
-    if (sourceColumnId === targetColumnId) {
-      const currentIndex = sourceCards.findIndex((c) => c.id === cardId);
-      if (currentIndex === targetIndex) return; // Prevent unnecessary re-renders if position unchanged
-
-      cleanSource.splice(targetIndex, 0, updatedCard);
-      set({ cards: { ...state.cards, [sourceColumnId]: cleanSource } });
-    } else {
-      // Handling structural lane crossing movement between two different columns
-      const mutableTarget = [...targetCards];
-      let crossTargetIndex = mutableTarget.findIndex((c) => c.id === targetId);
-      if (crossTargetIndex === -1) crossTargetIndex = mutableTarget.length;
-
-      mutableTarget.splice(crossTargetIndex, 0, updatedCard);
-      set({
-        cards: {
-          ...state.cards,
-          [sourceColumnId]: cleanSource,
-          [targetColumnId]: mutableTarget,
-        },
-      });
-    }
-  },
-
   // Database synchronization provider to persist final ordering matrix
   // PATCH /api/cards/:id
   persistCardPosition: async (cardId, targetColumnId, prevRank, nextRank) => {
@@ -334,16 +306,17 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
 
   syncUpdateCard: (updatedCard) => {
     set((state) => {
-      // Evacuate card if it shifted column paths externally via WS stream frames
-      const nextCards = { ...state.cards };
-      Object.keys(nextCards).forEach((colId) => {
-        nextCards[colId] = nextCards[colId].filter((c) => c.id !== updatedCard.id);
-      });
+      const nextCards = applyCardUpdates(state.cards, [updatedCard]);
+      if (nextCards === state.cards) return state;
+      return { cards: nextCards };
+    });
+  },
 
-      const colId = updatedCard.columnId;
-      const currentTrack = nextCards[colId] || [];
-      nextCards[colId] = [...currentTrack, updatedCard].sort((a, b) => a.position.localeCompare(b.position));
-
+  syncUpdateCards: (updatedCards) => {
+    if (updatedCards.length === 0) return;
+    set((state) => {
+      const nextCards = applyCardUpdates(state.cards, updatedCards);
+      if (nextCards === state.cards) return state;
       return { cards: nextCards };
     });
   },
