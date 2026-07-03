@@ -45,7 +45,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     syncUpdateColumn,
     syncDeleteColumn,
     syncAddCard,
-    syncUpdateCard,
+    syncUpdateCards,
     syncDeleteCard,
   } = useBoardStore();
 
@@ -58,12 +58,18 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
 
   // Transient state for drag animations to prevent infinite render loops from Zustand dispatches
   const [localCards, setLocalCards] = useState<Record<string, Card[]>>(() => useBoardStore.getState().cards);
+  const localCardsRef = useRef(localCards);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const pendingCardUpdatesRef = useRef<Map<string, Card>>(new Map());
+  const pendingCardUpdateFrameRef = useRef<number | null>(null);
 
   // Guard flag to block incoming WebSocket updates during local dragging calculations
   const isLocallyDragging = useRef(false);
+
+  const findCardColumnId = (cardGroups: Record<string, Card[]>, cardId: string) =>
+    Object.entries(cardGroups).find(([, columnCards]) => columnCards.some((card) => card.id === cardId))?.[0] ?? null;
 
   // Delay gesture activation to preserve native mobile/pointer scroll and text selection
   const sensors = useSensors(
@@ -81,6 +87,10 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
   }, [boardId, boards, setCurrentBoard]);
 
   // Re-sync local view only on mounting or external stream updates, ignored while dragging
+  useEffect(() => {
+    localCardsRef.current = localCards;
+  }, [localCards]);
+
   useEffect(() => {
     if (isLocallyDragging.current) return;
     setLocalCards(cards);
@@ -107,6 +117,20 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
   // Real-time WebSocket event pipeline listener
   useEffect(() => {
     if (!socket) return;
+    const pendingCardUpdates = pendingCardUpdatesRef.current;
+
+    const queueCardUpdate = (card: Card) => {
+      pendingCardUpdates.set(card.id, card);
+      if (pendingCardUpdateFrameRef.current !== null) return;
+
+      pendingCardUpdateFrameRef.current = requestAnimationFrame(() => {
+        pendingCardUpdateFrameRef.current = null;
+        const pendingCards = Array.from(pendingCardUpdates.values());
+        pendingCardUpdates.clear();
+        syncUpdateCards(pendingCards);
+      });
+    };
+
     console.log('[DEBUG] Registering listeners on socket id:', socket.id);
     console.log('[DEBUG] card_moved listener count BEFORE:', socket.listeners('card_moved').length);
 
@@ -141,16 +165,16 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
       syncAddCard(payload);
     });
 
-    socket.on('card_updated', (payload) => {
-      if (isLocallyDragging.current) return;
-      console.log('[WS_STREAM] Incoming frame payload: card_updated');
-      syncUpdateCard(payload);
+      socket.on('card_updated', (payload) => {
+        if (isLocallyDragging.current) return;
+        console.log('[WS_STREAM] Incoming frame payload: card_updated');
+      queueCardUpdate(payload);
     });
 
     socket.on('card_moved', (payload) => {
       if (isLocallyDragging.current) return;
       console.log('[WS_STREAM] Incoming frame payload: card_moved');
-      syncUpdateCard(payload);
+      queueCardUpdate(payload);
     });
 
     socket.on('card_deleted', (payload) => {
@@ -169,8 +193,13 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
       socket.off('card_updated');
       socket.off('card_moved');
       socket.off('card_deleted');
+      if (pendingCardUpdateFrameRef.current !== null) {
+        cancelAnimationFrame(pendingCardUpdateFrameRef.current);
+        pendingCardUpdateFrameRef.current = null;
+        pendingCardUpdates.clear();
+      }
     };
-  }, [socket, syncAddColumn, syncUpdateColumn, syncDeleteColumn, syncAddCard, syncUpdateCard, syncDeleteCard]);
+  }, [socket, syncUpdateBoard, syncAddColumn, syncUpdateColumn, syncDeleteColumn, syncAddCard, syncUpdateCards, syncDeleteCard]);
 
   const EMPTY_CARDS: Card[] = [];
 
@@ -248,23 +277,20 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     if (!activeColumnId || !overColumnId) return;
 
     setLocalCards((prev) => {
-      const sourceCards = prev[activeColumnId] || [];
+      const currentColumnId = findCardColumnId(prev, cardId) ?? activeColumnId;
+      const sourceCards = prev[currentColumnId] || [];
       const targetCards = prev[overColumnId!] || [];
       const cardToMove = sourceCards.find((c) => c.id === cardId);
       if (!cardToMove) return prev;
 
-      if (activeColumnId !== overColumnId) {
+      if (currentColumnId !== overColumnId) {
         const cleanSource = sourceCards.filter((c) => c.id !== cardId);
         const mutableTarget = targetCards.filter((c) => c.id !== cardId);
         let targetIndex = mutableTarget.findIndex((c) => c.id === overId);
         if (targetIndex === -1) targetIndex = mutableTarget.length;
 
-        // Prevent updates if the actual position does not change.
-        const alreadyAtIndex = targetCards.findIndex((c) => c.id === cardId) === targetIndex;
-        if (alreadyAtIndex) return prev;
-
         mutableTarget.splice(targetIndex, 0, { ...cardToMove, columnId: overColumnId });
-        return { ...prev, [activeColumnId]: cleanSource, [overColumnId!]: mutableTarget };
+        return { ...prev, [currentColumnId]: cleanSource, [overColumnId!]: mutableTarget };
       } else {
         const currentIndex = sourceCards.findIndex((c) => c.id === cardId);
         const targetIndex = sourceCards.findIndex((c) => c.id === overId);
@@ -291,7 +317,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
 
     const cardId = String(active.id);
     const targetId = String(over.id);
-    const sourceColumnId = String(active.data.current?.columnId ?? '');
+    const sourceColumnId = findCardColumnId(useBoardStore.getState().cards, cardId) ?? String(active.data.current?.columnId ?? '');
 
     let targetColumnId = sourceColumnId;
     if (over.data.current?.type === 'Column') {
@@ -302,7 +328,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
 
     moveCard(cardId, targetId, sourceColumnId, targetColumnId);
 
-    const currentList = localCards[targetColumnId] || [];
+    const currentList = localCardsRef.current[targetColumnId] || [];
     const finalIndex = currentList.findIndex((c) => c.id === cardId);
 
     if (finalIndex !== -1) {
