@@ -269,7 +269,7 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
         return {
           cards: {
             ...state.cards,
-            [sourceColumnId]: mutableCards,
+            [currentSourceColumnId]: mutableCards,
           },
         };
       }

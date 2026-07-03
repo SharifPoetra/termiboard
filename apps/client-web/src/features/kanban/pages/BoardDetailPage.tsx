@@ -265,7 +265,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     const overId = String(over.id);
     if (cardId === overId) return;
 
-    const activeColumnId = String(active.data.current?.columnId ?? '');
+    const activeColumnId = String(active.data.current?.sortable?.containerId || active.data.current?.columnId || '');
 
     let overColumnId: string | null = null;
     if (over.data.current?.type === 'Column') {
