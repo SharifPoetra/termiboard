@@ -8,7 +8,7 @@ import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { AlertModal } from '../../../components/ui/AlertModal';
 import { EditBoardModal } from '../../../components/ui/EditBoardModal';
 import { useSocket } from '../../../hooks/useSocket';
-import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare, Trash2, Edit2, Bell } from 'lucide-react';
+import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare, Trash2, Edit2, Bell, Loader2 } from 'lucide-react';
 
 interface DashboardPageProps {
   onSelectBoard: (boardId: string) => void;
@@ -16,12 +16,11 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) => {
   const { user, logout } = useAuthStore();
-  const { boards, fetchBoards, createBoard, updateBoard, deleteBoard, isLoading, error } = useBoardStore();
-
+  const { boards, fetchBoards, createBoard, updateBoard, deleteBoard, isLoading, error, clearError } = useBoardStore();
   const { invitations, addInvitation, acceptInvitation, rejectInvitation, fetchPendingInvitations } =
     useNotificationStore();
-  const [actionLoading, setActionLoading] = useState(false);
 
+  const [actionLoading, setActionLoading] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
   const [newBoardDesc, setNewBoardDesc] = useState('');
   const [formError, setFormError] = useState('');
@@ -30,27 +29,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingBoard, setEditingBoard] = useState<{ id: string; name: string; description: string } | null>(null);
 
-  // State and ref tracking for the top notification dropdown window matrix
   const [notiDropdownOpen, setNotiDropdownOpen] = useState(false);
   const notiDropdownRef = useRef<HTMLDivElement>(null);
 
   const socket = useSocket({ subscribeNotifications: true });
 
+  // Listen for real-time invitation events
   useEffect(() => {
     if (!socket) return;
-
-    // Listen to invitation_received events in real-time
     socket.on('invitation_received', (payload) => {
       console.log('[WS_STREAM] Live invitation package arrived:', payload);
-      const inviteData = payload.data;
-      addInvitation(inviteData);
+      addInvitation(payload.data);
     });
-
     return () => {
       socket.off('invitation_received');
     };
   }, [socket, addInvitation]);
 
+  // Initial data fetch and evacuation signal check
   useEffect(() => {
     fetchBoards();
     fetchPendingInvitations();
@@ -58,9 +54,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
       setIsEvacuated(true);
       sessionStorage.removeItem('TERMINAL_EVAC_SIGNAL');
     }
-  }, [fetchBoards]);
+  }, []);
 
-  // Intercept click signals outside the viewport boundaries to close the notification panel
+  // Close notification dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (notiDropdownRef.current && !notiDropdownRef.current.contains(event.target as Node)) {
@@ -80,6 +76,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
   const handleCreateBoard = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setFormError('');
+    clearError();
 
     if (!newBoardName.trim()) {
       setFormError('Board identity name cannot be empty');
@@ -91,21 +88,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
       setNewBoardName('');
       setNewBoardDesc('');
     } catch (err) {
-      // Global errors are handled by the store
+      // Error is handled globally by the store
     }
   };
 
+  // Deletion confirmation flow
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedBoardData, setSelectedBoardData] = useState<{ id: string; name: string } | null>(null);
 
   const handleDeleteOpenConfirm = (e: React.MouseEvent, boardId: string, boardName: string) => {
-    e.stopPropagation(); // CRITICAL: Prevents triggering onSelectBoard when clicking the trash icon
+    e.stopPropagation(); // Prevent card click navigation
     setSelectedBoardData({ id: boardId, name: boardName });
     setDeleteModalOpen(true);
   };
 
   const handleOpenEdit = (e: React.MouseEvent, board: any) => {
-    e.stopPropagation(); // CRITICAL: Prevents triggering onSelectBoard when clicking the pencil icon
+    e.stopPropagation(); // Prevent card click navigation
     setEditingBoard({ id: board.id, name: board.name, description: board.description || '' });
     setEditModalOpen(true);
   };
@@ -126,7 +124,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
     setActionLoading(true);
     try {
       await acceptInvitation(boardId);
-      await fetchBoards();
+      await fetchBoards(); // Refresh board list after accepting
     } catch (err) {
       console.error('Failed to accept board sequence:', err);
     } finally {
@@ -147,7 +145,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-mono flex flex-col selection:bg-emerald-500/30">
-      {/* TOP CONTROL NAVIGATION NAVBAR */}
+      {/* Header */}
       <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-6 py-3 flex flex-row items-center justify-between shadow-md gap-4">
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
           <Terminal className="text-emerald-400 animate-pulse shrink-0" size={18} />
@@ -163,9 +161,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           </div>
         </div>
 
-        {/* COMBINED CONTROL ACTIONS ZONE: Wraps notification stream anchor and session exit */}
+        {/* Notification bell + logout */}
         <div className="flex items-center gap-4 shrink-0">
-          {/* BELL CONTAINER HOOK: Houses absolute counter tag and dropdown viewport */}
           <div className="relative" ref={notiDropdownRef}>
             <button
               onClick={() => setNotiDropdownOpen(!notiDropdownOpen)}
@@ -173,8 +170,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
               title="System Notifications"
             >
               <Bell size={14} className={invitations.length > 0 ? 'animate-bounce' : ''} />
-
-              {/* RED BADGE COUNT INDICATOR: Only spawns if active invitations length > 0 */}
               {invitations.length > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white font-bold text-[9px] h-4 w-4 rounded-full flex items-center justify-center border border-slate-900 animate-in zoom-in-50">
                   {invitations.length}
@@ -182,7 +177,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
               )}
             </button>
 
-            {/* FLOATING SYSTEM NOTIFICATIONS DROPDOWN LAYER */}
             {notiDropdownOpen && (
               <div className="absolute right-0 mt-2 w-72 xs:w-80 bg-slate-900 border border-amber-500/30 rounded p-4 shadow-xl z-50 text-left animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-3">
@@ -202,7 +196,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
                           &gt; You have been invited to collaborate on board:{' '}
                           <span className="text-emerald-400 font-bold">#{inv.boardId.substring(0, 8)}</span>
                         </p>
-
                         <div className="flex items-center gap-2 justify-end font-bold pt-1.5 border-t border-slate-900">
                           <button
                             onClick={() => handleReject(inv.boardId)}
@@ -237,11 +230,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
         </div>
       </header>
 
-      {/* MAIN LAYOUT */}
+      {/* Main grid: create form + board list */}
       <main className="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-        {/* LEFT COMPONENT COLUMN */}
+        {/* Left: Create board panel */}
         <div className="sm:col-span-1 space-y-6">
-          {/* PANEL: CREATE BOARD */}
           <section className="bg-slate-900 border border-slate-800 rounded p-4 md:p-5 h-fit shadow-lg">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
               <FolderPlus className="text-emerald-400 shrink-0" size={16} />
@@ -250,14 +242,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
               </h2>
             </div>
 
+            {/* Display global error from store */}
+            {error && !formError && (
+              <div className="bg-red-950/30 border border-red-500/20 rounded p-2.5 text-[11px] text-red-400 mb-3">
+                {error}
+              </div>
+            )}
+
             <form onSubmit={handleCreateBoard} className="space-y-1">
               <Input
                 ref={inputRef}
                 label="Board Name"
                 placeholder="e.g., Marketing Campaign"
                 value={newBoardName}
-                onChange={(e) => setNewBoardName(e.target.value)}
-                error={formError || (error ? 'Deployment failed' : undefined)}
+                onChange={(e) => {
+                  setNewBoardName(e.target.value);
+                  if (formError) setFormError('');
+                }}
+                error={formError}
                 disabled={isLoading}
               />
               <Input
@@ -274,7 +276,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           </section>
         </div>
 
-        {/* RIGHT PANEL: LIST BOARDS */}
+        {/* Right: Board list */}
         <section className="sm:col-span-2 lg:col-span-3 flex flex-col gap-4">
           <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
             <Layout className="text-emerald-400 shrink-0" size={16} />
@@ -283,7 +285,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
             </h2>
           </div>
 
-          {boards.length === 0 ? (
+          {/* Loading indicator while initial fetch */}
+          {isLoading && boards.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <Loader2 className="text-emerald-400 animate-spin" size={24} />
+              <p className="text-xs text-slate-500 uppercase tracking-wider">Fetching boards...</p>
+            </div>
+          ) : boards.length === 0 ? (
             <div
               onClick={handleFocusInput}
               className="border border-dashed border-slate-800 hover:border-emerald-500/30 rounded-lg p-8 md:p-12 text-center bg-slate-900/40 cursor-pointer group transition-colors"
@@ -293,12 +301,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
                 size={32}
               />
               <p className="text-[11px] text-slate-500 group-hover:text-slate-300 tracking-wide uppercase px-2 font-mono transition-colors">
-                &gt; No project boards found. <br></br>
+                &gt; No project boards found. <br />
                 <span className="text-emerald-400 underline">[ Create your first board now ]</span>
               </p>
             </div>
           ) : (
-            /* Inside Grid Card: Handles single column layout on mobile, dual columns onward */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {boards.map((board) => (
                 <div
@@ -316,11 +323,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
                   </div>
                   <div className="border-t border-slate-950/60 pt-2.5 mt-auto flex items-center justify-between text-[10px] text-slate-600 font-mono gap-2 min-w-0">
                     <span className="truncate flex-1">ID: {board.id.substring(0, 8)}...</span>
-
-                    {/* ACTION ZONE */}
                     <div className="flex items-center gap-3 shrink-0">
                       <span>{new Date(board.createdAt).toLocaleDateString()}</span>
-                      {/* EDIT BUTTON */}
                       <button
                         onClick={(e) => handleOpenEdit(e, board)}
                         className="text-slate-500 hover:text-cyan-400 p-1 rounded hover:bg-slate-950 border border-transparent hover:border-slate-800/60 cursor-pointer transition-all duration-150"
@@ -328,7 +332,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
                       >
                         <Edit2 size={12} />
                       </button>
-                      {/* DELETE BUTTON */}
                       <button
                         onClick={(e) => handleDeleteOpenConfirm(e, board.id, board.name)}
                         className="text-slate-500 hover:text-red-400 p-1 rounded hover:bg-slate-950 border border-transparent hover:border-slate-800/60 cursor-pointer transition-all duration-150"
@@ -345,6 +348,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
         </section>
       </main>
 
+      {/* Modals */}
       <EditBoardModal
         isOpen={editModalOpen}
         onClose={() => {
@@ -371,7 +375,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
       <AlertModal
         isOpen={isEvacuated}
         title="Board Deleted"
-        message="This project board has been deleted by the administrator. You are being redirected to the dashboard."
+        message="This project board has been deleted by the administrator. You are redirected to the dashboard."
         onClose={() => setIsEvacuated(false)}
       />
     </div>
