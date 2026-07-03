@@ -7,6 +7,11 @@ on:
     paths:
       - 'apps/client-web/**'
       - 'packages/core/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'apps/client-web/**'
+      - 'packages/core/**'
 
 permissions:
   contents: read
@@ -32,6 +37,7 @@ jobs:
           cache-dependency-path: './package-lock.json'
 
       - name: Setup Pages Infrastructure
+        if: github.event_name == 'push'
         uses: actions/configure-pages@v6
 
       - name: Install Dependencies (Root Environment)
@@ -46,11 +52,13 @@ jobs:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
       - name: Upload Build Artifact
+        if: github.event_name == 'push'
         uses: actions/upload-pages-artifact@v5
         with:
           path: ./apps/client-web/dist
 
   deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
