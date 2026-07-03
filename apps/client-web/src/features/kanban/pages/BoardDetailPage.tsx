@@ -46,6 +46,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
   const [newColumnName, setNewColumnName] = useState('');
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [activeCard, setActiveCard] = useState<Card | null>(null);
+  const [persistingCardId, setPersistingCardId] = useState<string | null>(null);
 
   // Draft state for drag preview to avoid Zustand re-renders during drag
   const [localCards, setLocalCards] = useState<Record<string, Card[]>>(() => useBoardStore.getState().cards);
@@ -316,6 +317,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     const nextCard = finalList[finalIndex + 1];
 
     useBoardStore.setState({ cards: localCardsRef.current });
+    setPersistingCardId(cardId);
 
     try {
       await persistCardPosition(cardId, targetColumnId, prevCard?.position ?? null, nextCard?.position ?? null);
@@ -323,6 +325,8 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
       console.error('Persist failed, rollback', err);
       useBoardStore.setState({ cards: dragSnapshotRef.current });
       setLocalCards(dragSnapshotRef.current);
+    } finally {
+      setPersistingCardId(null);
     }
   };
 
@@ -420,7 +424,14 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
         <main className="flex-1 p-4 md:p-6 overflow-x-auto flex items-start gap-4 custom-scrollbar select-none">
           {columns.map((column) => {
             const columnCards = localCards[column.id] ?? EMPTY_CARDS;
-            return <ColumnContainer key={column.id} column={column} localCards={columnCards} />;
+            return (
+              <ColumnContainer
+                key={column.id}
+                column={column}
+                localCards={columnCards}
+                persistingCardId={persistingCardId}
+              />
+            );
           })}
           <div className="w-72 sm:w-80 shrink-0">
             {isAddingColumn ? (
