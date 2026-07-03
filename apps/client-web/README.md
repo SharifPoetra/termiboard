@@ -41,7 +41,7 @@ This directory houses the frontend user interface for **TermiBoard**, engineered
 - **Core UI Engine:** React 18+ (TypeScript)
 - **Style Framework:** Tailwind CSS (with slate-950 terminal matrix theme)
 - **State Management:** Zustand (Lightweight centralized hooks)
-- **Drag & Drop Layer:** `@dnd-kit/core` + `@dnd-kit/sortable`
+- **Drag & Drop Layer:** `@dnd-kit/react` + `@dnd-kit/helpers`
 - **Network Client:** Axios (REST API calls) & `socket.io-client` (Real-Time streams)
 - **Icon Library:** `lucide-react`
 
