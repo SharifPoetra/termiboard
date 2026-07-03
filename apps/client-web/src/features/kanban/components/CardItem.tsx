@@ -35,7 +35,6 @@ export const CardItem: React.FC<CardItemProps> = React.memo(({ card, isOverlay =
   // Hide original element during drag, only show overlay
   const style = {
     opacity: isDragging && !isOverlay ? 0 : 1,
-    touchAction: 'none',
   };
 
   const handleSaveCardData = async (newTitle: string, newContent: string) => {
