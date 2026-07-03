@@ -2,14 +2,6 @@ import { create } from 'zustand';
 import axiosInstance from '../lib/axios';
 import { Board, Card, Column } from '@termiboard/core';
 
-const areCardsEqual = (left: Card, right: Card) =>
-  left.id === right.id &&
-  left.columnId === right.columnId &&
-  left.title === right.title &&
-  left.content === right.content &&
-  left.position === right.position &&
-  String(left.createdAt) === String(right.createdAt);
-
 interface BoardState {
   boards: Board[];
   currentBoard: Board | null;
@@ -43,7 +35,6 @@ interface BoardActions {
   deleteCard: (cardId: string) => Promise<void>;
 
   // Drag and Drop Internal Handler
-  moveCard: (cardId: string, targetId: string, sourceColumnId: string, targetColumnId: string) => void;
   persistCardPosition: (
     cardId: string,
     targetColumnId: string,
@@ -61,6 +52,17 @@ interface BoardActions {
   syncUpdateCards: (cards: Card[]) => void;
   syncDeleteCard: (card: Card) => void;
 }
+
+const areCardsEqual = (left: Card, right: Card) => {
+  return (
+    left.id === right.id &&
+    left.columnId === right.columnId &&
+    left.title === right.title &&
+    left.content === right.content &&
+    left.position === right.position &&
+    String(left.createdAt) === String(right.createdAt)
+  );
+};
 
 const applyCardUpdates = (currentCards: Record<string, Card[]>, updatedCards: Card[]) => {
   let nextCards = currentCards;
@@ -239,65 +241,6 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
       set({ error: err.response?.data?.message || 'Failed to purge card object' });
       throw err;
     }
-  },
-
-  // Local state mutator for instant drag-and-drop feedback
-  moveCard: (cardId, targetId, sourceColumnId, targetColumnId) => {
-    set((state) => {
-      const currentSourceColumnId = state.cards[sourceColumnId]?.some((card) => card.id === cardId)
-        ? sourceColumnId
-        : (Object.entries(state.cards).find(([, columnCards]) => columnCards.some((card) => card.id === cardId))?.[0] ??
-          sourceColumnId);
-
-      const sourceCards = state.cards[currentSourceColumnId] || [];
-      const targetCards = state.cards[targetColumnId] || [];
-
-      const cardToMove = sourceCards.find((c) => c.id === cardId) || targetCards.find((c) => c.id === cardId);
-      if (!cardToMove) return state;
-
-      // Scenario 1: Intra-column movement (Same column boundary)
-      if (currentSourceColumnId === targetColumnId) {
-        const currentIndex = sourceCards.findIndex((c) => c.id === cardId);
-        const targetIndex = sourceCards.findIndex((c) => c.id === targetId);
-
-        if (currentIndex === -1 || targetIndex === -1 || currentIndex === targetIndex) return state;
-
-        const mutableCards = [...sourceCards];
-        const [movedCard] = mutableCards.splice(currentIndex, 1);
-        mutableCards.splice(targetIndex, 0, movedCard);
-
-        return {
-          cards: {
-            ...state.cards,
-            [currentSourceColumnId]: mutableCards,
-          },
-        };
-      }
-
-      // Scenario 2: Inter-column movement (Cross-column boundary dispatch)
-      const cleanSource = sourceCards.filter((c) => c.id !== cardId);
-
-      // Filter out the card if it already sneaked into the target slice via asynchronous updates
-      const cleanTarget = targetCards.filter((c) => c.id !== cardId);
-      const mutableTarget = [...cleanTarget];
-
-      // Fallback to bottom append if target anchoring element is absent or matches container ID
-      let crossTargetIndex = mutableTarget.findIndex((c) => c.id === targetId);
-      if (crossTargetIndex === -1) {
-        crossTargetIndex = mutableTarget.length;
-      }
-
-      const updatedCard = { ...cardToMove, columnId: targetColumnId };
-      mutableTarget.splice(crossTargetIndex, 0, updatedCard);
-
-      return {
-        cards: {
-          ...state.cards,
-          [currentSourceColumnId]: cleanSource,
-          [targetColumnId]: mutableTarget,
-        },
-      };
-    });
   },
 
   // Database synchronization provider to persist final ordering matrix

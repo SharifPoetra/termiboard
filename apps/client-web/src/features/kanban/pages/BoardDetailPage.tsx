@@ -301,15 +301,14 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
   const handleDragEnd = async (event: DragEndEvent) => {
     const { source, target } = event.operation;
     setActiveCard(null);
+    isLocallyDragging.current = false;
 
     if (event.canceled || !target) {
-      isLocallyDragging.current = false;
       setLocalCards(dragSnapshotRef.current);
       return;
     }
 
     const cardId = String(source?.id);
-    const sourceColumnId = findCardColumnId(cards, cardId) ?? String(source?.data?.columnId ?? '');
     const targetColumnId = target.data?.type === 'Column' ? String(target.id) : String(target.data?.columnId);
 
     const finalList = localCardsRef.current[targetColumnId] || [];
@@ -317,8 +316,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     const prevCard = finalList[finalIndex - 1];
     const nextCard = finalList[finalIndex + 1];
 
-    // Optimistic update using existing moveCard
-    moveCard(cardId, String(target.id), sourceColumnId, targetColumnId);
+    useBoardStore.setState({ cards: localCardsRef.current });
 
     try {
       await persistCardPosition(cardId, targetColumnId, prevCard?.position ?? null, nextCard?.position ?? null);
@@ -326,8 +324,6 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
       console.error('Persist failed, rollback', err);
       useBoardStore.setState({ cards: dragSnapshotRef.current });
       setLocalCards(dragSnapshotRef.current);
-    } finally {
-      isLocallyDragging.current = false;
     }
   };
 
