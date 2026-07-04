@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../../store/authStore';
 import { useBoardStore } from '../../../store/boardStore';
 import { useSocket } from '../../../hooks/useSocket';
 import { ColumnContainer } from '../components/ColumnContainer';
@@ -8,7 +9,7 @@ import { EditBoardModal } from '../../../components/ui/EditBoardModal';
 import { InviteUserModal } from '../../../components/ui/InviteUserModal';
 import { CardItem } from '../components/CardItem';
 import { Card } from '@termiboard/core';
-import { ArrowLeft, Plus, Terminal, LayoutGrid, Edit2, Trash2, UserPlus, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Plus, Terminal, LayoutGrid, Edit2, Trash2, UserPlus, MoreVertical, LogOut } from 'lucide-react';
 
 import { DragDropProvider, DragOverlay, DragStartEvent, DragOverEvent, DragEndEvent } from '@dnd-kit/react';
 import { PointerSensor } from '@dnd-kit/dom';
@@ -26,6 +27,7 @@ export const BoardDetailPage: React.FC = () => {
     currentBoard,
     boards,
     deleteBoard,
+    kickMember,
     setCurrentBoard,
     fetchColumns,
     createColumn,
@@ -40,11 +42,14 @@ export const BoardDetailPage: React.FC = () => {
     syncDeleteCard,
   } = useBoardStore();
 
+  const { user } = useAuthStore();
+
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
   const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [persistingCardId, setPersistingCardId] = useState<string | null>(null);
 
@@ -123,6 +128,19 @@ export const BoardDetailPage: React.FC = () => {
         syncUpdateCards(pendingCards);
       });
     };
+
+    socket.on('member_kicked', (payload: { boardId: string; userId: string }) => {
+      if (payload.userId === user?.id) {
+        console.log('[WS_STREAM] You have been kicked from the board. Evacuating...');
+        sessionStorage.setItem('TERMINAL_EVAC_SIGNAL', 'true');
+        navigate('/dashboard');
+      }
+    });
+
+    socket.on('member_left', (_payload: { boardId: string; userId: string }) => {
+      console.log('[WS_STREAM] A member has left the board');
+      // Optional: refresh board list or update UI
+    });
 
     socket.on('board_updated', (payload) => {
       console.log('[WS_STREAM] Incoming frame payload: board_updated');
@@ -225,6 +243,16 @@ export const BoardDetailPage: React.FC = () => {
       console.error('Board delete failed', err);
     } finally {
       setIsConfirmOpen(false);
+    }
+  };
+
+  const handleLeaveBoard = async () => {
+    if (!user?.id) return;
+    try {
+      await kickMember(boardId, user.id);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Leave board failed', err);
     }
   };
 
@@ -355,6 +383,13 @@ export const BoardDetailPage: React.FC = () => {
             >
               <Trash2 size={11} />
             </button>
+            <button
+              onClick={() => setIsLeaveModalOpen(true)}
+              className="hidden md:inline-block text-slate-500 hover:text-amber-400 bg-transparent border-none p-0.5 cursor-pointer transition-colors"
+              title="Leave Board"
+            >
+              <LogOut size={11} />
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -397,6 +432,16 @@ export const BoardDetailPage: React.FC = () => {
                 >
                   <Edit2 size={11} />
                   <span>Edit Board</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    setIsLeaveModalOpen(true);
+                  }}
+                  className="w-full px-3 py-2.5 text-left text-amber-400 hover:text-amber-300 hover:bg-slate-950 border-none bg-transparent cursor-pointer flex items-center gap-2 uppercase font-bold transition-colors border-t border-slate-850"
+                >
+                  <LogOut size={11} />
+                  <span>Leave Board</span>
                 </button>
                 <button
                   onClick={handleDeleteBoardClick}
@@ -500,6 +545,13 @@ export const BoardDetailPage: React.FC = () => {
         onConfirm={handleExecuteUpdateBoard}
       />
       <InviteUserModal isOpen={inviteModalOpen} onClose={() => setInviteModalOpen(false)} boardId={boardId} />
+      <ConfirmModal
+        isOpen={isLeaveModalOpen}
+        title="Leave Board"
+        message="Are you sure you want to leave this board? You will be removed from the member list."
+        onConfirm={handleLeaveBoard}
+        onCancel={() => setIsLeaveModalOpen(false)}
+      />
     </div>
   );
 };
