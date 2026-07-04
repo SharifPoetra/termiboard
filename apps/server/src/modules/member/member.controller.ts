@@ -200,24 +200,34 @@ export const kickMemberHandler = async (request: FastifyRequest, reply: FastifyR
   const requesterId = (request.user as any).id;
 
   try {
-    // Prevent administrators from kicking out the original board owner
+    // Fetch board data to identify owner
     const boardData = await db.select({ ownerId: boards.userId }).from(boards).where(eq(boards.id, boardId));
 
     if (boardData.length === 0) {
-      return reply.status(404).send({ status: 'fail', message: 'Board matrix not found.' });
+      return reply.status(404).send({ status: 'fail', message: 'Board not found.' });
     }
 
     const boardOwnerId = boardData[0].ownerId;
-    if (userId === boardOwnerId) {
+    const isSelfRemoval = requesterId === userId;
+
+    // Owner cannot leave their own board
+    if (isSelfRemoval && requesterId === boardOwnerId) {
       return reply.status(400).send({
         status: 'fail',
-        message: 'CRITICAL_ERR: Cannot sever connection of the core system creator (Owner).',
+        message: 'You are the owner of this board. You cannot leave it — use delete board instead.',
       });
     }
 
-    // If the user is purging THEMSELVES, grant permission immediately (Leave Board flow)
-    if (requesterId !== userId) {
-      // If purging someone else, verify if the requester has Admin or Owner privileges
+    // If kicking someone else, verify admin/owner privileges
+    if (!isSelfRemoval) {
+      // Prevent kicking the board owner
+      if (userId === boardOwnerId) {
+        return reply.status(400).send({
+          status: 'fail',
+          message: 'Cannot remove the board owner from the workspace.',
+        });
+      }
+
       const isRequesterAdmin = await db
         .select()
         .from(boardMembers)
@@ -235,12 +245,12 @@ export const kickMemberHandler = async (request: FastifyRequest, reply: FastifyR
       if (isRequesterAdmin.length === 0 && !isOwner) {
         return reply.status(403).send({
           status: 'fail',
-          message: 'ACCESS_DENIED: Operational privileges insufficient to execute member purging.',
+          message: 'Only board admins or the owner can remove members.',
         });
       }
     }
 
-    // Execute connection severance (Delete entry from database records)
+    // Delete membership record
     const deletedMember = await db
       .delete(boardMembers)
       .where(and(eq(boardMembers.boardId, boardId), eq(boardMembers.userId, userId)))
@@ -249,22 +259,26 @@ export const kickMemberHandler = async (request: FastifyRequest, reply: FastifyR
     if (deletedMember.length === 0) {
       return reply.status(404).send({
         status: 'fail',
-        message: 'Target entity is not registered as a member of this board.',
+        message: 'This user is not a member of the board.',
       });
     }
 
-    // BROADCAST EVENT: Force client frontend to intercept this and boot the kicked user out of the stream room
-    io.to(boardId).emit('member_kicked', { boardId, userId });
+    // Emit appropriate event
+    if (isSelfRemoval) {
+      io.to(boardId).emit('member_left', { boardId, userId });
+      return reply.status(200).send({
+        status: 'success',
+        message: 'You have left the board.',
+      });
+    }
 
+    io.to(boardId).emit('member_kicked', { boardId, userId });
     return reply.status(200).send({
       status: 'success',
-      message: 'Connection severed successfully. Member purged from board matrix.',
-      data: {
-        purgedUserId: userId,
-      },
+      message: 'Member removed from the board.',
     });
   } catch (err: any) {
-    request.server.log.error(err, 'Kick member execution failed');
+    request.server.log.error(err, 'Kick/Leave member failed');
     return reply.status(500).send({
       status: 'error',
       message: 'Internal server error',

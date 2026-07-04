@@ -435,8 +435,12 @@ Authenticates the profile credentials. Accounts that haven't passed the OTP veri
 
 #### 🔹 Kick Member or Leave Board
 
+Removes a member from the board. If the `userId` matches your own, you will **leave** the board voluntarily.  
+If the `userId` belongs to another member, only **admins or the board owner** can kick them.  
+The board owner cannot be kicked, and the owner cannot leave their own board (use delete board instead).
+
 - **Endpoint**: `DELETE /api/boards/kick`
-- **Auth Required**: Yes (Requires Admin/Owner privileges to kick others; Any member can send their own ID to leave)
+- **Auth Required**: Yes
 - **Request Body**:
 
 ```json
@@ -446,19 +450,63 @@ Authenticates the profile credentials. Accounts that haven't passed the OTP veri
 }
 ```
 
-- **Success Response (200 OK)**:
+- **Success Response (200 OK) – Self-removal (Leave):**
 
 ```json
 {
   "status": "success",
-  "message": "Connection severed successfully. Member purged from board matrix.",
-  "data": {
-    "purgedUserId": "33a9b122-8d77-44a3-bc12-990ffde111ab"
-  }
+  "message": "You have left the board."
 }
 ```
 
-- **Triggered Side Effect**: Broadcasts a WebSocket event `member_kicked` to force-evacuate and unmount the targeted user session inside the frontend viewport.
+- \*_Success Response (200 OK) – Kick another member:_
+
+```json
+{
+  "status": "success",
+  "message": "Member removed from the board."
+}
+```
+
+· Error Response (400 – Owner trying to leave):
+
+```json
+{
+  "status": "fail",
+  "message": "You are the owner of this board. You cannot leave it — use delete board instead."
+}
+```
+
+· Error Response (400 – Trying to kick the owner):
+
+```json
+{
+  "status": "fail",
+  "message": "Cannot remove the board owner from the workspace."
+}
+```
+
+· Error Response (403 – Not admin/owner):
+
+```json
+{
+  "status": "fail",
+  "message": "Only board admins or the owner can remove members."
+}
+```
+
+· Error Response (404 – Not a member):
+
+```json
+{
+  "status": "fail",
+  "message": "This user is not a member of the board."
+}
+```
+
+- **Triggered Side Effect:**
+- If self-removal: broadcasts member_left event with { boardId, userId }.
+- If kicking another member: broadcasts member_kicked event with { boardId, userId }.
 
 ### 3. Columns Module (/api/columns)
 
@@ -736,7 +784,17 @@ socket.emit('subscribe_notifications', 'e4a8b792-51c3-4c4c-811a-7b3b4d4567ef');
 
 - **member_joined**: Fires automatically to the entire board space **only after** the recipient officially triggers the accept sequence.
   - _Payload_: Full Member object with status mutated to active.
-- **member_kicked**: Fires instantly when an entity session is severed by an active administrator or triggers self-evacuation (Leave Board).
+- **member_kicked**: Fires when an admin/owner removes another member from the board.
+  - _Payload_:
+
+```json
+{
+  "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
+  "userId": "33a9b122-8d77-44a3-bc12-990ffde111ab"
+}
+```
+
+- **member_left**: Fires when a member voluntarily leaves the board (self-removal).
   - _Payload_:
 
 ```json
