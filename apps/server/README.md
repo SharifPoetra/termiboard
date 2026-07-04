@@ -459,7 +459,7 @@ The board owner cannot be kicked, and the owner cannot leave their own board (us
 }
 ```
 
-- \*_Success Response (200 OK) – Kick another member:_
+- **Success Response (200 OK) – Kick another member:**
 
 ```json
 {
@@ -468,7 +468,7 @@ The board owner cannot be kicked, and the owner cannot leave their own board (us
 }
 ```
 
-· Error Response (400 – Owner trying to leave):
+- **Error Response (400 – Owner trying to leave):**
 
 ```json
 {
@@ -477,7 +477,7 @@ The board owner cannot be kicked, and the owner cannot leave their own board (us
 }
 ```
 
-· Error Response (400 – Trying to kick the owner):
+- **Error Response (400 – Trying to kick the owner):**
 
 ```json
 {
@@ -486,7 +486,7 @@ The board owner cannot be kicked, and the owner cannot leave their own board (us
 }
 ```
 
-· Error Response (403 – Not admin/owner):
+- **Error Response (403 – Not admin/owner):**
 
 ```json
 {
@@ -495,7 +495,7 @@ The board owner cannot be kicked, and the owner cannot leave their own board (us
 }
 ```
 
-· Error Response (404 – Not a member):
+- **Error Response (404 – Not a member):**
 
 ```json
 {
@@ -507,6 +507,54 @@ The board owner cannot be kicked, and the owner cannot leave their own board (us
 - **Triggered Side Effect:**
 - If self-removal: broadcasts member_left event with { boardId, userId }.
 - If kicking another member: broadcasts member_kicked event with { boardId, userId }.
+
+#### 🔹 Get Board Members
+
+Retrieve a list of all members (active and pending) for a specific board.  
+Requires the authenticated user to be an active member of the board.
+
+- **Endpoint**: `GET /api/boards/:boardId/members`
+- **Auth Required**: Yes
+- **Success Response (200 OK)**:
+
+```json
+{
+  "status": "success",
+  "data": {
+    "members": [
+      {
+        "id": "91a14cc5-9922-4412-bd73-bb66ff82cba1",
+        "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
+        "userId": "33a9b122-8d77-44a3-bc12-990ffde111ab",
+        "role": "admin",
+        "status": "active",
+        "joinedAt": "2026-06-13T08:57:42.000Z",
+        "username": "sharif",
+        "email": "sharif@example.com"
+      },
+      {
+        "id": "a1b2c3d4-...",
+        "boardId": "7e2bb492-dac3-41c3-a178-63fffd17c7cd",
+        "userId": "44b2c122-...",
+        "role": "member",
+        "status": "pending",
+        "joinedAt": "2026-06-14T10:00:00.000Z",
+        "username": "budi",
+        "email": "budi@example.com"
+      }
+    ]
+  }
+}
+```
+
+- **Error Response (403):**
+
+```json
+{
+  "status": "fail",
+  "message": "ACCESS_DENIED: You are not a member of this board."
+}
+```
 
 ### 3. Columns Module (/api/columns)
 

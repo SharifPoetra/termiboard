@@ -109,6 +109,36 @@ export const addMemberHandler = async (request: FastifyRequest, reply: FastifyRe
   }
 };
 
+export const getBoardMembersHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+  const { boardId } = request.params as { boardId: string };
+  const { db } = request.server;
+
+  try {
+    const boardMembersList = await db
+      .select({
+        id: boardMembers.id,
+        boardId: boardMembers.boardId,
+        userId: boardMembers.userId,
+        role: boardMembers.role,
+        status: boardMembers.status,
+        joinedAt: boardMembers.createdAt,
+        username: users.username,
+        email: users.email,
+      })
+      .from(boardMembers)
+      .innerJoin(users, eq(boardMembers.userId, users.id))
+      .where(eq(boardMembers.boardId, boardId));
+
+    return reply.status(200).send({
+      status: 'success',
+      data: { members: boardMembersList },
+    });
+  } catch (err: any) {
+    request.server.log.error(err, 'Get board members failed');
+    return reply.status(500).send({ status: 'error', message: 'Internal server error' });
+  }
+};
+
 export const getPendingInvitationsHandler = async (request: FastifyRequest, reply: FastifyReply) => {
   const { db } = request.server;
   const userId = (request.user as any).id;

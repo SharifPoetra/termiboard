@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import {
   addMemberHandler,
+  getBoardMembersHandler,
   getPendingInvitationsHandler,
   acceptInviteHandler,
   rejectInviteHandler,
@@ -8,6 +9,7 @@ import {
 } from './member.controller.ts';
 import {
   addMemberSchema,
+  getBoardMembersSchema,
   getPendingInvitationsSchema,
   acceptInviteSchema,
   rejectInviteSchema,
@@ -24,4 +26,9 @@ export const memberRoutes = async (app: FastifyInstance) => {
   app.post('/invite/accept', { ...acceptInviteSchema, preHandler: [app.authenticate], handler: acceptInviteHandler });
   app.post('/invite/reject', { ...rejectInviteSchema, preHandler: [app.authenticate], handler: rejectInviteHandler });
   app.delete('/kick', { ...kickMemberSchema, preHandler: [app.authenticate], handler: kickMemberHandler });
+  app.get('/:boardId/members', {
+    ...getBoardMembersSchema,
+    preHandler: [app.authenticate, app.checkBoardAccess],
+    handler: getBoardMembersHandler,
+  });
 };
