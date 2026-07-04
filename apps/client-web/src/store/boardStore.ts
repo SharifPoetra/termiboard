@@ -12,12 +12,15 @@ interface BoardState {
 }
 
 interface BoardActions {
+  clearError: () => void;
+
+  // Board Actions
   fetchBoards: () => Promise<void>;
   createBoard: (boardData: { name: string; description: string }) => Promise<void>;
   updateBoard: (boardId: string, boardData: { name?: string; description?: string }) => Promise<void>;
   setCurrentBoard: (board: Board | null) => void;
   deleteBoard: (boardId: string) => Promise<void>;
-  clearError: () => void;
+  kickMember: (boardId: string, userId: string) => Promise<void>;
 
   // Columns Actions
   fetchColumns: (boardId: string) => Promise<void>;
@@ -152,6 +155,16 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
       }));
     } catch (err: any) {
       set({ error: err.response?.data?.message || 'Failed to terminate board' });
+      throw err;
+    }
+  },
+
+  // DELETE /api/boards/kick
+  kickMember: async (boardId, userId) => {
+    try {
+      await axiosInstance.delete('/boards/kick', { data: { boardId, userId } });
+    } catch (err: any) {
+      set({ error: err.response?.data?.message || 'Failed to execute kick/leave operation' });
       throw err;
     }
   },
