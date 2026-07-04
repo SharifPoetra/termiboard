@@ -1,16 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../store/authStore';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { Terminal, ShieldAlert } from 'lucide-react';
 
-interface LoginPageProps {
-  onNavigateToRegister: () => void;
-  onNavigateToHome: () => void;
-  onLoginSuccess: () => void;
-}
-
-export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onNavigateToHome, onLoginSuccess }) => {
+export const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuthStore();
 
   const [formData, setFormData] = useState({
@@ -21,6 +17,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onNa
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    // Clear field error on typing
     if (fieldErrors[e.target.name]) {
       setFieldErrors({ ...fieldErrors, [e.target.name]: '' });
     }
@@ -42,7 +39,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onNa
 
     try {
       await login(formData);
-      onLoginSuccess();
+      navigate('/welcome'); // Redirect after login success
     } catch (err) {
       // Error handled by store
     }
@@ -57,14 +54,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onNa
           <span className="text-xs font-bold text-slate-400 tracking-wider">USER_LOGIN.SYS</span>
         </div>
 
-        {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6">
           <h2 className="text-lg font-bold text-emerald-400 mb-2 tracking-wide">SYSTEM ACCESS</h2>
           <p className="text-xs text-slate-500 mb-6 leading-relaxed">
             Please enter your account email and security password to access your dashboard.
           </p>
 
-          {/* Error Message from Server */}
+          {/* Server error */}
           {error && (
             <div className="bg-red-950/30 border border-red-500/30 rounded p-3 mb-5 flex gap-2.5 items-start">
               <ShieldAlert className="text-red-400 shrink-0" size={18} />
@@ -106,7 +102,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onNa
               type="button"
               onClick={() => {
                 clearError();
-                onNavigateToRegister();
+                navigate('/register');
               }}
               className="text-emerald-400 hover:underline bg-transparent border-none p-0 cursor-pointer font-mono"
             >
@@ -114,13 +110,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onNa
             </button>
           </p>
 
-          {/* ESCAPE TRIGGER BUTTON TO BACK HOME */}
+          {/* Back to home */}
           <div className="border-t border-slate-800/60 pt-4 mt-5 text-center">
             <button
               type="button"
               onClick={() => {
                 clearError();
-                onNavigateToHome();
+                navigate('/');
               }}
               className="text-[10px] text-slate-600 hover:text-slate-400 tracking-widest uppercase transition-colors bg-transparent border-none cursor-pointer font-mono"
             >

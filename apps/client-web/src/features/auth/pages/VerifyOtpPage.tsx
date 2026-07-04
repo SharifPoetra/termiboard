@@ -1,24 +1,29 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../../store/authStore';
 import { Button } from '../../../components/ui/Button';
 import { KeyRound, ShieldAlert, RefreshCw, ArrowLeft } from 'lucide-react';
 
-interface VerifyOtpPageProps {
-  email: string;
-  onCancel: () => void;
-  onSuccess: () => void;
-}
-
-export const VerifyOtpPage: React.FC<VerifyOtpPageProps> = ({ email, onCancel, onSuccess }) => {
+export const VerifyOtpPage: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { verifyOtp, resendOtp, isLoading, error, clearError } = useAuthStore();
+
+  // Email passed from registration via location state
+  const email = (location.state as any)?.email;
+  if (!email) {
+    // Fallback: no email in state, redirect to register
+    return <Navigate to="/register" replace />;
+  }
+
   const [otp, setOtp] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Start cooldown from 60s because OTP was already sent on registration
+  // Cooldown starts at 60s since OTP was sent during registration
   const [cooldown, setCooldown] = useState(60);
   const [resendSuccess, setResendSuccess] = useState(false);
 
-  // Cooldown countdown
+  // Countdown timer
   useEffect(() => {
     if (cooldown > 0) {
       const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
@@ -39,7 +44,7 @@ export const VerifyOtpPage: React.FC<VerifyOtpPageProps> = ({ email, onCancel, o
 
     try {
       await verifyOtp(email, otp.trim());
-      onSuccess();
+      navigate('/welcome'); // Verification success → go to welcome page
     } catch (err) {
       // Error handled globally by the auth store
     }
@@ -53,10 +58,10 @@ export const VerifyOtpPage: React.FC<VerifyOtpPageProps> = ({ email, onCancel, o
     try {
       await resendOtp(email);
       setResendSuccess(true);
-      setCooldown(60); // Restart cooldown after successful resend
-      setOtp(''); // Clear OTP field for new code
+      setCooldown(60); // Restart cooldown
+      setOtp(''); // Clear input for new code
     } catch (err) {
-      // Error handled by the store
+      // Error handled by store
     }
   };
 
@@ -83,7 +88,7 @@ export const VerifyOtpPage: React.FC<VerifyOtpPageProps> = ({ email, onCancel, o
               maxLength={6}
               placeholder="000000"
               value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} // Accept digits only
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
               className="w-full text-center tracking-[0.5em] text-2xl font-bold text-emerald-400 bg-slate-950 border border-slate-800 rounded py-3 focus:outline-none focus:border-emerald-500/50 placeholder:tracking-normal placeholder:text-sm placeholder:text-slate-700 transition-colors"
               disabled={isLoading}
             />
@@ -97,7 +102,7 @@ export const VerifyOtpPage: React.FC<VerifyOtpPageProps> = ({ email, onCancel, o
             </div>
           )}
 
-          {/* Success message after resend */}
+          {/* Resend success message */}
           {resendSuccess && !error && (
             <div className="bg-emerald-950/20 border border-emerald-500/20 rounded p-2.5 text-[11px] text-emerald-400">
               <span>[SYSTEM]: New dynamic OTP packet sent successfully.</span>
@@ -117,7 +122,7 @@ export const VerifyOtpPage: React.FC<VerifyOtpPageProps> = ({ email, onCancel, o
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={onCancel}
+                onClick={() => navigate('/register')}
                 disabled={isLoading}
                 className="flex-1 bg-transparent border border-slate-800 hover:border-slate-700 text-slate-500 hover:text-slate-400 py-2 rounded text-[10px] uppercase font-bold cursor-pointer transition-colors flex items-center justify-center gap-1"
               >

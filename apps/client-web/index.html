@@ -33,6 +33,18 @@
       content="Manage collaborative task cards and track project workflows inside a developer-friendly terminal board."
     />
     <meta name="twitter:image" content="https://sharifpoetra.github.io/termiboard/logo-preview.png" />
+
+    <script>
+      (function () {
+        var redirect = sessionStorage.getItem('redirect');
+        if (redirect) {
+          sessionStorage.removeItem('redirect');
+          if (redirect !== location.origin + '/') {
+            history.replaceState(null, null, redirect);
+          }
+        }
+      })();
+    </script>
   </head>
 
   <body>

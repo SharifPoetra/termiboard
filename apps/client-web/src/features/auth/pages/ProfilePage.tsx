@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../store/authStore';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { ArrowLeft, User, Terminal, ShieldAlert, Edit3 } from 'lucide-react';
 
-interface ProfilePageProps {
-  onBack: () => void;
-}
-
-export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
+export const ProfilePage: React.FC = () => {
+  const navigate = useNavigate();
   const { user, updateProfile, isLoading, error, clearError } = useAuthStore();
 
   const [username, setUsername] = useState(user?.username || '');
@@ -57,7 +55,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
       return;
     }
 
-    // Password validation only if a new password is provided
+    // Validate password only if a new one is provided
     if (password) {
       if (password.length < 6) {
         setValidationError('Password must be at least 6 characters');
@@ -73,13 +71,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
       await updateProfile({
         username: username.trim(),
         email: email.trim(),
-        password: password || undefined, // send undefined if empty to keep unchanged
+        password: password || undefined, // Keep unchanged if empty
       });
 
       setPassword('');
       setConfirmPassword('');
       setSuccessMessage('> Profile parameters reconfigured and committed to database successfully.');
-      setIsEditing(false); // Switch back to view mode on success
+      setIsEditing(false); // Back to view mode on success
     } catch (err) {
       // Error handled globally by the auth store
     }
@@ -90,7 +88,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
       <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-6 py-3 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3 min-w-0">
           <button
-            onClick={onBack}
+            onClick={() => navigate('/dashboard')}
             className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors bg-transparent border-none cursor-pointer shrink-0"
           >
             <ArrowLeft size={16} />
@@ -113,7 +111,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
             </h2>
           </div>
 
-          {/* View mode – read-only user info */}
+          {/* View mode – read-only */}
           {!isEditing && (
             <div className="space-y-4">
               <div>
@@ -147,7 +145,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
             </div>
           )}
 
-          {/* Edit mode – form to update profile */}
+          {/* Edit mode – form */}
           {isEditing && (
             <form onSubmit={handleUpdateSubmit} className="space-y-3">
               <Input
@@ -182,7 +180,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
                   placeholder="••••••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={isLoading || !password} // disabled if no new password entered
+                  disabled={isLoading || !password} // disabled until password entered
                 />
               </div>
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useBoardStore } from '../../../store/boardStore';
 import { useAuthStore } from '../../../store/authStore';
 import { useNotificationStore } from '../../../store/notificationStore';
@@ -10,11 +11,8 @@ import { EditBoardModal } from '../../../components/ui/EditBoardModal';
 import { useSocket } from '../../../hooks/useSocket';
 import { FolderPlus, Terminal, Layout, LogOut, TerminalSquare, Trash2, Edit2, Bell, Loader2 } from 'lucide-react';
 
-interface DashboardPageProps {
-  onSelectBoard: (boardId: string) => void;
-}
-
-export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) => {
+export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { boards, fetchBoards, createBoard, updateBoard, deleteBoard, isLoading, error, clearError } = useBoardStore();
   const { invitations, addInvitation, acceptInvitation, rejectInvitation, fetchPendingInvitations } =
@@ -34,7 +32,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
 
   const socket = useSocket({ subscribeNotifications: true });
 
-  // Listen for real-time invitation events
+  // Real-time invitation listener
   useEffect(() => {
     if (!socket) return;
     socket.on('invitation_received', (payload) => {
@@ -46,7 +44,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
     };
   }, [socket, addInvitation]);
 
-  // Initial data fetch and evacuation signal check
+  // Initial fetch & evacuation signal
   useEffect(() => {
     fetchBoards();
     fetchPendingInvitations();
@@ -88,22 +86,21 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
       setNewBoardName('');
       setNewBoardDesc('');
     } catch (err) {
-      // Error is handled globally by the store
+      // Error handled globally by the store
     }
   };
 
-  // Deletion confirmation flow
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedBoardData, setSelectedBoardData] = useState<{ id: string; name: string } | null>(null);
 
   const handleDeleteOpenConfirm = (e: React.MouseEvent, boardId: string, boardName: string) => {
-    e.stopPropagation(); // Prevent card click navigation
+    e.stopPropagation(); // Prevent navigation to board on delete click
     setSelectedBoardData({ id: boardId, name: boardName });
     setDeleteModalOpen(true);
   };
 
   const handleOpenEdit = (e: React.MouseEvent, board: any) => {
-    e.stopPropagation(); // Prevent card click navigation
+    e.stopPropagation(); // Prevent navigation to board on edit click
     setEditingBoard({ id: board.id, name: board.name, description: board.description || '' });
     setEditModalOpen(true);
   };
@@ -124,7 +121,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
     setActionLoading(true);
     try {
       await acceptInvitation(boardId);
-      await fetchBoards(); // Refresh board list after accepting
+      await fetchBoards();
     } catch (err) {
       console.error('Failed to accept board sequence:', err);
     } finally {
@@ -143,16 +140,21 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
     }
   };
 
+  // Logout then redirect to home
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-mono flex flex-col selection:bg-emerald-500/30">
-      {/* Header */}
       <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-6 py-3 flex flex-row items-center justify-between shadow-md gap-4">
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
           <Terminal className="text-emerald-400 animate-pulse shrink-0" size={18} />
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-xs md:text-sm font-bold tracking-widest text-slate-200 shrink-0">Dashboard //</span>
             <button
-              onClick={() => onSelectBoard('PROFILE_PAGE_SIGNAL')}
+              onClick={() => navigate('/profile')}
               className="text-[10px] md:text-xs text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 hover:border-emerald-500/40 hover:text-emerald-400 transition-colors font-mono cursor-pointer truncate"
               title="Open Profile Settings"
             >
@@ -161,8 +163,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           </div>
         </div>
 
-        {/* Notification bell + logout */}
         <div className="flex items-center gap-4 shrink-0">
+          {/* Notification bell */}
           <div className="relative" ref={notiDropdownRef}>
             <button
               onClick={() => setNotiDropdownOpen(!notiDropdownOpen)}
@@ -221,7 +223,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           </div>
 
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="text-[11px] md:text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 flex items-center gap-1.5 bg-transparent border-none cursor-pointer transition-colors"
           >
             <LogOut size={13} /> <span className="hidden xs:inline">[ LOGOUT ]</span>
@@ -230,9 +232,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
         </div>
       </header>
 
-      {/* Main grid: create form + board list */}
       <main className="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-        {/* Left: Create board panel */}
+        {/* Create board panel */}
         <div className="sm:col-span-1 space-y-6">
           <section className="bg-slate-900 border border-slate-800 rounded p-4 md:p-5 h-fit shadow-lg">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
@@ -242,7 +243,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
               </h2>
             </div>
 
-            {/* Display global error from store */}
             {error && !formError && (
               <div className="bg-red-950/30 border border-red-500/20 rounded p-2.5 text-[11px] text-red-400 mb-3">
                 {error}
@@ -276,7 +276,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
           </section>
         </div>
 
-        {/* Right: Board list */}
+        {/* Board list */}
         <section className="sm:col-span-2 lg:col-span-3 flex flex-col gap-4">
           <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
             <Layout className="text-emerald-400 shrink-0" size={16} />
@@ -285,7 +285,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
             </h2>
           </div>
 
-          {/* Loading indicator while initial fetch */}
           {isLoading && boards.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Loader2 className="text-emerald-400 animate-spin" size={24} />
@@ -310,7 +309,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
               {boards.map((board) => (
                 <div
                   key={board.id}
-                  onClick={() => onSelectBoard(board.id)}
+                  onClick={() => navigate(`/board/${board.id}`)}
                   className="bg-slate-900 border border-slate-800 hover:border-emerald-500/40 rounded p-4 flex flex-col justify-between shadow transition-all duration-200 cursor-pointer group hover:shadow-emerald-950/5 break-words min-w-0"
                 >
                   <div className="min-w-0">
@@ -348,7 +347,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onSelectBoard }) =
         </section>
       </main>
 
-      {/* Modals */}
       <EditBoardModal
         isOpen={editModalOpen}
         onClose={() => {
