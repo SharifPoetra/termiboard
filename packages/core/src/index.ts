@@ -59,6 +59,7 @@ export interface ServerToClientEvents {
   invitation_received: (payload: { message: string; data: BoardMember }) => void;
   member_joined: (member: BoardMember) => void;
   member_kicked: (payload: { boardId: string; userId: string }) => void;
+  member_left: (payload: { boardId: string; userId: string }) => void;
 
   // Columns Sync
   column_created: (column: Column) => void;
