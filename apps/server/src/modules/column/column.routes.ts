@@ -4,11 +4,33 @@ import {
   getColumnsByBoardHandler,
   updateColumnHandler,
   deleteColumnHandler,
-} from './column.controller.js';
+} from './column.controller.ts';
+import {
+  createColumnSchema,
+  getColumnsByBoardSchema,
+  updateColumnSchema,
+  deleteColumnSchema,
+} from './column.schema.ts';
 
 export const columnRoutes = async (app: FastifyInstance) => {
-  app.post('/', { preHandler: [app.authenticate, app.checkBoardAccess] }, createColumnHandler);
-  app.get('/:boardId', { preHandler: [app.authenticate, app.checkBoardAccess] }, getColumnsByBoardHandler);
-  app.patch('/:id', { preHandler: [app.authenticate, app.checkBoardAccess] }, updateColumnHandler);
-  app.delete('/:id', { preHandler: [app.authenticate, app.checkBoardAccess] }, deleteColumnHandler);
+  app.post('/', {
+    ...createColumnSchema,
+    preHandler: [app.authenticate, app.checkBoardAccess],
+    handler: createColumnHandler,
+  });
+  app.get('/:boardId', {
+    ...getColumnsByBoardSchema,
+    preHandler: [app.authenticate, app.checkBoardAccess],
+    handler: getColumnsByBoardHandler,
+  });
+  app.patch('/:id', {
+    ...updateColumnSchema,
+    preHandler: [app.authenticate, app.checkBoardAccess],
+    handler: updateColumnHandler,
+  });
+  app.delete('/:id', {
+    ...deleteColumnSchema,
+    preHandler: [app.authenticate, app.checkBoardAccess],
+    handler: deleteColumnHandler,
+  });
 };

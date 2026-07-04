@@ -6,11 +6,12 @@ import {
   verifyOtpHandler,
   resendOtpHandler,
 } from './auth.controller.ts';
+import { registerSchema, loginSchema, verifyOtpSchema, resendOtpSchema, updateProfileSchema } from './auth.schema.ts';
 
 export const authRoutes = async (app: FastifyInstance) => {
-  app.post('/register', registerHandler);
-  app.post('/login', loginHandler);
-  app.post('/verify-otp', verifyOtpHandler);
-  app.post('/resend-otp', resendOtpHandler);
-  app.patch('/profile', { preHandler: app.authenticate }, updateProfileHandler);
+  app.post('/register', { ...registerSchema, handler: registerHandler });
+  app.post('/login', { ...loginSchema, handler: loginHandler });
+  app.post('/verify-otp', { ...verifyOtpSchema, handler: verifyOtpHandler });
+  app.post('/resend-otp', { ...resendOtpSchema, handler: resendOtpHandler });
+  app.patch('/profile', { ...updateProfileSchema, preHandler: [app.authenticate], handler: updateProfileHandler });
 };
