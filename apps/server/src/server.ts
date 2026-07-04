@@ -181,11 +181,15 @@ await app.register(columnRoutes, { prefix: '/api/columns' });
 await app.register(cardRoutes, { prefix: '/api/cards' });
 await app.register(memberRoutes, { prefix: '/api/boards' });
 
-// Health Check Endpoint
-app.get('/health', async () => ({
-  status: 'OK',
-  message: 'TermiBoard API is online!',
-}));
+// Home Endpoint
+app.get('/', async (_request, reply) => {
+  reply.status(200).send({
+    status: 'OK',
+    message: 'Termiboard API',
+    docs: '/docs',
+    api: '/api',
+  });
+});
 
 // Spin up the application server
 const host = app.config.API_ADDR;
