@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useBoardStore } from '../../../store/boardStore';
 import { useSocket } from '../../../hooks/useSocket';
 import { ColumnContainer } from '../components/ColumnContainer';
@@ -14,12 +15,11 @@ import { PointerSensor } from '@dnd-kit/dom';
 import { PointerActivationConstraints } from '@dnd-kit/dom';
 import { move } from '@dnd-kit/helpers';
 
-interface BoardDetailPageProps {
-  boardId: string;
-  onBackToDashboard: () => void;
-}
+export const BoardDetailPage: React.FC = () => {
+  const { boardId } = useParams<{ boardId: string }>();
+  const navigate = useNavigate();
+  if (!boardId) return null; // Should be caught by route
 
-export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBackToDashboard }) => {
   const {
     columns,
     cards,
@@ -89,16 +89,11 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     localCardsRef.current = localCards;
   }, [localCards]);
 
-  // Sync from store only when not dragging
+  // Sync local cards from store unless dragging
   useEffect(() => {
     if (isLocallyDragging.current) return;
     setLocalCards(cards);
   }, [cards]);
-
-  const onBackToDashboardRef = useRef(onBackToDashboard);
-  useEffect(() => {
-    onBackToDashboardRef.current = onBackToDashboard;
-  }, [onBackToDashboard]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -137,7 +132,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     socket.on('board_deleted', () => {
       console.log('[WS_STREAM] Parent board was purged. Evacuating...');
       sessionStorage.setItem('TERMINAL_EVAC_SIGNAL', 'true');
-      onBackToDashboardRef.current();
+      navigate('/dashboard');
     });
 
     socket.on('column_created', (payload) => {
@@ -202,6 +197,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
     syncAddCard,
     syncUpdateCards,
     syncDeleteCard,
+    navigate,
   ]);
 
   const EMPTY_CARDS: Card[] = [];
@@ -224,7 +220,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
   const handleExecuteDeleteBoard = async () => {
     try {
       await deleteBoard(boardId);
-      onBackToDashboard();
+      navigate('/dashboard');
     } catch (err) {
       console.error('Board delete failed', err);
     } finally {
@@ -335,7 +331,7 @@ export const BoardDetailPage: React.FC<BoardDetailPageProps> = ({ boardId, onBac
       <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-6 py-3 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3 min-w-0">
           <button
-            onClick={onBackToDashboard}
+            onClick={() => navigate('/dashboard')}
             className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors bg-transparent border-none cursor-pointer shrink-0"
           >
             <ArrowLeft size={16} />
