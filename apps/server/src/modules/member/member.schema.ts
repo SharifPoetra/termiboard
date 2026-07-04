@@ -67,6 +67,57 @@ export const addMemberSchema = {
   },
 };
 
+export const getBoardMembersSchema = {
+  schema: {
+    tags: ['Boards'],
+    description: 'Get all members of a board (active & pending)',
+    security: [{ bearerAuth: [] }],
+    params: {
+      type: 'object',
+      required: ['boardId'],
+      properties: {
+        boardId: { type: 'string', format: 'uuid' },
+      },
+    },
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          status: { type: 'string' },
+          data: {
+            type: 'object',
+            properties: {
+              members: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    boardId: { type: 'string' },
+                    userId: { type: 'string' },
+                    role: { type: 'string' },
+                    status: { type: 'string' },
+                    joinedAt: { type: 'string', format: 'date-time' },
+                    username: { type: 'string' },
+                    email: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      500: {
+        type: 'object',
+        properties: {
+          status: { type: 'string' },
+          message: { type: 'string' },
+        },
+      },
+    },
+  },
+};
+
 export const getPendingInvitationsSchema = {
   schema: {
     tags: ['Boards'],
