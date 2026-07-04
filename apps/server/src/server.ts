@@ -2,7 +2,10 @@ import fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyEnv from '@fastify/env';
 import fastifyJwt from '@fastify/jwt';
+import fastifySwagger from '@fastify/swagger';
+import fastifyScalar from '@scalar/fastify-api-reference';
 import { Server } from 'socket.io';
+import TermiboardPackage from '../package.json' with { type: 'json' };
 import { initDatabase } from './database/db.ts';
 import { initAuthMiddleware } from './middlewares/auth.middleware.ts';
 import { initCheckBoardAccessMiddleware } from './middlewares/boardAccess.middleware.ts';
@@ -108,6 +111,67 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     app.log.info(`❌ User disconnected from WebSocket: ${socket.id}`);
   });
+});
+
+// Initialize swagger docs
+await app.register(fastifySwagger, {
+  openapi: {
+    info: {
+      title: 'TermiBoard API',
+      description: 'Real-time collaborative Kanban board backend',
+      version: TermiboardPackage.version,
+    },
+    // servers: [
+    //   {
+    //     url: `http://${app.config.API_ADDR}:${app.config.API_PORT}`,
+    //     description: 'Development server',
+    //   },
+    // ],
+    tags: [
+      { name: 'Auth', description: 'Authentication & user management' },
+      { name: 'Boards', description: 'Project boards operations' },
+      { name: 'Columns', description: 'Board columns management' },
+      { name: 'Cards', description: 'Task cards management' },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+  },
+});
+
+// Initialize docs UI
+await app.register(fastifyScalar, {
+  routePrefix: '/docs',
+  configuration: {
+    theme: 'dark',
+    showSidebar: true,
+    layout: 'modern',
+    hideDownloadButton: true,
+    hideTestRequestButton: true,
+    hideClientButton: true,
+    hideModels: true,
+    hiddenClients: true,
+    agent: {
+      disabled: true,
+    },
+    mcp: {
+      disabled: true,
+    },
+    metaData: {
+      title: 'TermiboardAPI',
+      description: 'Real-time collaborative Kanban board backend',
+      ogDescription: 'Real-time collaborative Kanban board backend',
+      ogTitle: 'Termiboard API',
+      ogImage: 'https://termiboard.sharif.my.id/favicon.png',
+      twitterCard: 'https://termiboard.sharif.my.id/logo-preview.png',
+    },
+  },
 });
 
 // Features Routing Definitions
