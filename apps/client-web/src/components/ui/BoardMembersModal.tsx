@@ -72,9 +72,6 @@ export const BoardMembersModal: React.FC<BoardMembersModalProps> = ({ isOpen, on
 
         {/* Content */}
         <div className="p-4 max-h-96 overflow-y-auto space-y-2">
-          <p className="text-xs text-slate-500">
-            role: {currentUserRole} | userId: {currentUserId} | members: {boardMembers.length}
-          </p>
           {isLoading ? (
             <div className="flex justify-center py-4">
               <Loader2 className="text-emerald-400 animate-spin" size={18} />
