@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useBoardStore } from '../../store/boardStore';
-import { X, Shield, User, UserPlus, Loader2 } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+import { ConfirmModal } from './ConfirmModal';
+import { X, Shield, User, UserPlus, Loader2, XCircle } from 'lucide-react';
+import { BoardMemberList } from '@termiboard/core';
 
 interface BoardMembersModalProps {
   isOpen: boolean;
@@ -9,9 +12,15 @@ interface BoardMembersModalProps {
 }
 
 export const BoardMembersModal: React.FC<BoardMembersModalProps> = ({ isOpen, onClose, boardId }) => {
-  const { boardMembers, currentUserRole } = useBoardStore();
-  const [isLoading, setIsLoading] = React.useState(false);
+  const { boardMembers, currentUserRole, fetchBoardMembers, kickMember } = useBoardStore();
+  const { user } = useAuthStore();
+  const [isLoading, setIsLoading] = useState(false);
+  const [kickingId, setKickingId] = useState<string | null>(null);
 
+  // Track member selected for kick confirmation
+  const [kickTarget, setKickTarget] = useState<any | null>(null);
+
+  // Fetch members every time the modal opens to keep data fresh
   React.useEffect(() => {
     if (isOpen) {
       setIsLoading(true);
@@ -22,9 +31,25 @@ export const BoardMembersModal: React.FC<BoardMembersModalProps> = ({ isOpen, on
     }
   }, [isOpen, boardId]);
 
+  // Execute kick after user confirms
+  const handleConfirmKick = async () => {
+    if (!kickTarget) return;
+    setKickingId(kickTarget.id);
+    try {
+      await kickMember(boardId, kickTarget.userId);
+      await fetchBoardMembers(boardId); // refresh list after removal
+    } catch (err) {
+      console.error('Kick failed', err);
+    } finally {
+      setKickingId(null);
+      setKickTarget(null);
+    }
+  };
+
   if (!isOpen) return null;
 
   const isAdminOrOwner = currentUserRole === 'admin' || currentUserRole === 'owner';
+  const currentUserId = user?.id;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -47,12 +72,15 @@ export const BoardMembersModal: React.FC<BoardMembersModalProps> = ({ isOpen, on
 
         {/* Content */}
         <div className="p-4 max-h-96 overflow-y-auto space-y-2">
+          <p className="text-xs text-slate-500">
+            role: {currentUserRole} | userId: {currentUserId} | members: {boardMembers.length}
+          </p>
           {isLoading ? (
             <div className="flex justify-center py-4">
               <Loader2 className="text-emerald-400 animate-spin" size={18} />
             </div>
           ) : (
-            boardMembers.map((member: any) => (
+            boardMembers.map((member: BoardMemberList) => (
               <div
                 key={member.id}
                 className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded p-2.5 text-xs"
@@ -76,12 +104,33 @@ export const BoardMembersModal: React.FC<BoardMembersModalProps> = ({ isOpen, on
                       <UserPlus size={10} /> {member.role}
                     </span>
                   )}
+
+                  {/* Kick button only visible to admins/owners and not for themselves */}
+                  {isAdminOrOwner && member.userId !== currentUserId && (
+                    <button
+                      onClick={() => setKickTarget(member)}
+                      disabled={kickingId === member.id}
+                      className="text-slate-500 hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed p-1 bg-transparent border-none cursor-pointer transition-colors"
+                      title="Kick member"
+                    >
+                      {kickingId === member.id ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={14} />}
+                    </button>
+                  )}
                 </div>
               </div>
             ))
           )}
         </div>
       </div>
+
+      {/* Kick confirmation dialog */}
+      <ConfirmModal
+        isOpen={!!kickTarget}
+        title="Kick Member"
+        message={`Are you sure you want to kick "${kickTarget?.username}" from this board?`}
+        onConfirm={handleConfirmKick}
+        onCancel={() => setKickTarget(null)}
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import axiosInstance from '../lib/axios';
-import { Board, Card, Column, BoardMember } from '@termiboard/core';
+import { Board, Card, Column, BoardMemberList } from '@termiboard/core';
 import { useAuthStore } from './authStore';
 
 interface BoardState {
@@ -23,7 +23,7 @@ interface BoardActions {
   deleteBoard: (boardId: string) => Promise<void>;
   kickMember: (boardId: string, userId: string) => Promise<void>;
 
-  boardMembers: BoardMember[];
+  boardMembers: BoardMemberList[];
   currentUserRole: string | null;
   fetchBoardMembers: (boardId: string) => Promise<void>;
 
