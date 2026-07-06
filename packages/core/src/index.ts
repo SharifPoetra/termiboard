@@ -39,6 +39,17 @@ export interface ApiResponse<T> {
   data?: T;
 }
 
+export interface BoardMemberList {
+  id: string;
+  boardId: string;
+  userId: string;
+  role: string;
+  status: string;
+  joinedAt: Date;
+  username: string;
+  email: string;
+}
+
 // ==========================================
 // ⚡ SOCKET.IO CONTRACTS (Cross-Platform)
 // ==========================================
