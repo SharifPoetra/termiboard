@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import axiosInstance from '../lib/axios';
-import { Board, Card, Column } from '@termiboard/core';
+import { Board, Card, Column, BoardMemberList } from '@termiboard/core';
+import { useAuthStore } from './authStore';
 
 interface BoardState {
   boards: Board[];
@@ -21,6 +22,10 @@ interface BoardActions {
   setCurrentBoard: (board: Board | null) => void;
   deleteBoard: (boardId: string) => Promise<void>;
   kickMember: (boardId: string, userId: string) => Promise<void>;
+
+  boardMembers: BoardMemberList[];
+  currentUserRole: string | null;
+  fetchBoardMembers: (boardId: string) => Promise<void>;
 
   // Columns Actions
   fetchColumns: (boardId: string) => Promise<void>;
@@ -156,6 +161,26 @@ export const useBoardStore = create<BoardState & BoardActions>((set) => ({
     } catch (err: any) {
       set({ error: err.response?.data?.message || 'Failed to terminate board' });
       throw err;
+    }
+  },
+
+  // Initial state
+  boardMembers: [],
+  currentUserRole: null,
+
+  // GET /api/boards/:id/members
+  fetchBoardMembers: async (boardId: string) => {
+    try {
+      const response = await axiosInstance.get(`/boards/${boardId}/members`);
+      const members = response.data.data.members;
+      const userId = useAuthStore.getState().user?.id;
+      const myMember = members.find((m: any) => m.userId === userId);
+      set({
+        boardMembers: members,
+        currentUserRole: myMember?.role || null,
+      });
+    } catch (err: any) {
+      console.error('Failed to fetch board members', err);
     }
   },
 

@@ -7,9 +7,21 @@ import { ColumnContainer } from '../components/ColumnContainer';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { EditBoardModal } from '../../../components/ui/EditBoardModal';
 import { InviteUserModal } from '../../../components/ui/InviteUserModal';
+import { BoardMembersModal } from '../../../components/ui/BoardMembersModal';
 import { CardItem } from '../components/CardItem';
 import { Card } from '@termiboard/core';
-import { ArrowLeft, Plus, Terminal, LayoutGrid, Edit2, Trash2, UserPlus, MoreVertical, LogOut } from 'lucide-react';
+import {
+  ArrowLeft,
+  Plus,
+  Terminal,
+  LayoutGrid,
+  Edit2,
+  Trash2,
+  UserPlus,
+  MoreVertical,
+  LogOut,
+  Users,
+} from 'lucide-react';
 
 import { DragDropProvider, DragOverlay, DragStartEvent, DragOverEvent, DragEndEvent } from '@dnd-kit/react';
 import { PointerSensor } from '@dnd-kit/dom';
@@ -52,6 +64,7 @@ export const BoardDetailPage: React.FC = () => {
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [persistingCardId, setPersistingCardId] = useState<string | null>(null);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
   // Draft state for drag preview to avoid Zustand re-renders during drag
   const [localCards, setLocalCards] = useState<Record<string, Card[]>>(() => useBoardStore.getState().cards);
@@ -400,6 +413,13 @@ export const BoardDetailPage: React.FC = () => {
             <UserPlus size={12} />
             <span>Invite</span>
           </button>
+          <button
+            onClick={() => setIsMembersModalOpen(true)}
+            className="hidden md:flex bg-slate-950 border-slate-800 hover:border-cyan-500/40 text-slate-400 hover:text-cyan-400 px-2.5 py-1 rounded text-xs items-center gap-1.5 transition-all duration-150 cursor-pointer uppercase font-bold"
+          >
+            <Users size={12} />
+            <span>Members</span>
+          </button>
           <div className="text-[10px] text-emerald-400 bg-slate-950 border-emerald-500/20 px-2 py-0.5 rounded flex items-center gap-1.5 shadow-sm shrink-0">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
             <span>LIVE SYNC</span>
@@ -422,6 +442,16 @@ export const BoardDetailPage: React.FC = () => {
                 >
                   <UserPlus size={12} />
                   <span>Invite User</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    setIsMembersModalOpen(true);
+                  }}
+                  className="w-full px-3 py-2.5 text-left text-slate-300 hover:text-cyan-400 hover:bg-slate-950 border-none bg-transparent cursor-pointer flex items-center gap-2 uppercase font-bold transition-colors border-t border-slate-850"
+                >
+                  <Users size={12} />
+                  <span>View Members</span>
                 </button>
                 <button
                   onClick={() => {
@@ -552,6 +582,7 @@ export const BoardDetailPage: React.FC = () => {
         onConfirm={handleLeaveBoard}
         onCancel={() => setIsLeaveModalOpen(false)}
       />
+      <BoardMembersModal isOpen={isMembersModalOpen} onClose={() => setIsMembersModalOpen(false)} boardId={boardId!} />
     </div>
   );
 };
