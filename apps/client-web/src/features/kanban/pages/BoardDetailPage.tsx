@@ -14,8 +14,8 @@ import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { useBoardSocket } from '../hooks/useBoardSocket';
 import { Card } from '@termiboard/core';
 import { DragDropProvider, DragOverlay } from '@dnd-kit/react';
-import { PointerSensor } from '@dnd-kit/dom';
-import { PointerActivationConstraints } from '@dnd-kit/dom';
+import { PointerSensor, PointerActivationConstraints } from '@dnd-kit/dom';
+import { LayoutGrid, Plus } from 'lucide-react';
 
 export const BoardDetailPage: React.FC = () => {
   const { boardId } = useParams<{ boardId: string }>();
@@ -161,29 +161,66 @@ export const BoardDetailPage: React.FC = () => {
           style={{ touchAction: 'pan-x pan-y' }}
           className="flex-1 p-4 md:p-6 overflow-x-auto flex items-start gap-4 custom-scrollbar select-none"
         >
-          {columns.map((column) => {
-            const columnCards = localCards[column.id] ?? EMPTY_CARDS;
-            return (
-              <ColumnContainer
-                key={column.id}
-                column={column}
-                localCards={columnCards}
-                persistingCardId={persistingCardId}
-              />
-            );
-          })}
+          {columns.length === 0 ? (
+            isAddingColumn ? (
+              // Show form in center when adding first column
+              <div className="flex-1 flex items-center justify-center h-full min-h-[60vh]">
+                <div className="w-72 sm:w-80">
+                  <AddColumnForm
+                    isAdding={isAddingColumn}
+                    columnName={newColumnName}
+                    onColumnNameChange={setNewColumnName}
+                    onStartAdding={() => setIsAddingColumn(true)}
+                    onCancel={() => setIsAddingColumn(false)}
+                    onSubmit={handleCreateColumn}
+                  />
+                </div>
+              </div>
+            ) : (
+              /* Empty board state */
+              <div className="flex-1 flex items-center justify-center h-full min-h-[60vh]">
+                <div className="text-center space-y-4 max-w-sm">
+                  <LayoutGrid className="text-slate-700 mx-auto" size={40} />
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">// Board Empty</h3>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    This workspace has no columns yet. Create your first column to start organizing tasks.
+                  </p>
+                  <button
+                    onClick={() => setIsAddingColumn(true)}
+                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2.5 rounded text-xs uppercase tracking-wider cursor-pointer transition-colors"
+                  >
+                    <Plus size={12} /> Add First Column
+                  </button>
+                </div>
+              </div>
+            )
+          ) : (
+            <>
+              {columns.map((column) => {
+                const columnCards = localCards[column.id] ?? EMPTY_CARDS;
+                return (
+                  <ColumnContainer
+                    key={column.id}
+                    column={column}
+                    localCards={columnCards}
+                    persistingCardId={persistingCardId}
+                  />
+                );
+              })}
 
-          {/* Add Column */}
-          <div className="w-72 sm:w-80 shrink-0">
-            <AddColumnForm
-              isAdding={isAddingColumn}
-              columnName={newColumnName}
-              onColumnNameChange={setNewColumnName}
-              onStartAdding={() => setIsAddingColumn(true)}
-              onCancel={() => setIsAddingColumn(false)}
-              onSubmit={handleCreateColumn}
-            />
-          </div>
+              {/* Add Column */}
+              <div className="w-72 sm:w-80 shrink-0">
+                <AddColumnForm
+                  isAdding={isAddingColumn}
+                  columnName={newColumnName}
+                  onColumnNameChange={setNewColumnName}
+                  onStartAdding={() => setIsAddingColumn(true)}
+                  onCancel={() => setIsAddingColumn(false)}
+                  onSubmit={handleCreateColumn}
+                />
+              </div>
+            </>
+          )}
         </main>
 
         {/* Drag Overlay */}
