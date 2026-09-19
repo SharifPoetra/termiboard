@@ -310,7 +310,7 @@ export const DashboardPage: React.FC = () => {
                 <div
                   key={board.id}
                   onClick={() => navigate(`/board/${board.id}`)}
-                  className="bg-slate-900 border border-slate-800 hover:border-emerald-500/40 rounded p-4 flex flex-col justify-between shadow transition-all duration-200 cursor-pointer group hover:shadow-emerald-950/5 break-words min-w-0"
+                  className="bg-slate-900 border border-slate-800 hover:border-emerald-500/40 rounded p-4 flex flex-col justify-between shadow transition-all duration-200 cursor-pointer group hover:shadow-emerald-950/5 wrap-break-word min-w-0"
                 >
                   <div className="min-w-0">
                     <h3 className="text-xs md:text-sm font-bold text-slate-200 group-hover:text-emerald-400 font-mono tracking-wide mb-1.5 transition-colors truncate">
