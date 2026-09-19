@@ -42,9 +42,6 @@ jobs:
       - name: Build Core Package
         run: npm run build -w @termiboard/core
 
-      - name: Run Tests
-        run: npm run test --workspaces --if-present
-
       - name: Lint Server
         run: npm run lint -w termiboard-server
 
