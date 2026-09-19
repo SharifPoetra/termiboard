@@ -14,7 +14,7 @@ export const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-mono flex flex-col selection:bg-emerald-500/30 overflow-x-hidden relative">
       {/* Background grid effect */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none opacity-40 z-0" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-size-[4rem_4rem] mask-[radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none opacity-40 z-0" />
 
       {/* Header */}
       <header className="border-b border-slate-900/80 bg-slate-950/50 backdrop-blur-md relative z-50 px-4 md:px-8 py-3.5 flex items-center justify-between">
@@ -52,7 +52,7 @@ export const HomePage: React.FC = () => {
 
       {/* Mobile menu drawer */}
       {isMenuOpen && (
-        <div className="sm:hidden fixed inset-x-0 top-[49px] bg-slate-950 border-b border-slate-800 z-40 shadow-2xl p-4 flex flex-col gap-3 animate-in slide-in-from-top duration-200 font-mono">
+        <div className="sm:hidden fixed inset-x-0 top-12.25 bg-slate-950 border-b border-slate-800 z-40 shadow-2xl p-4 flex flex-col gap-3 animate-in slide-in-from-top duration-200 font-mono">
           <div className="text-[9px] text-slate-600 uppercase tracking-widest border-b border-slate-900 pb-1">
             // Account Navigation
           </div>
