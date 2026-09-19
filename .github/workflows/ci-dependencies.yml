@@ -1,0 +1,58 @@
+name: Dependency CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'apps/**/package.json'
+      - 'packages/**/package.json'
+  push:
+    branches:
+      - main
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'apps/**/package.json'
+      - 'packages/**/package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js Runtime
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Core Package
+        run: npm run build -w @termiboard/core
+
+      - name: Run Tests
+        run: npm run test --workspaces --if-present
+
+      - name: Lint Server
+        run: npm run lint -w termiboard-server
+
+      - name: Check Server Formatting
+        run: npm run format -w termiboard-server -- --check
+
+      - name: Build Server
+        run: npm run build -w termiboard-server
+
+      - name: Build Client
+        run: npm run build -w termiboard-client-web
