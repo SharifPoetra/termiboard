@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useSocket } from '../../../hooks/useSocket';
 import { useBoardStore } from '../../../store/boardStore';
 import { Card } from '@termiboard/core';
@@ -21,18 +21,21 @@ export const useBoardSocket = (boardId: string, userId: string | undefined) => {
   const pendingCardUpdateFrameRef = useRef<number | null>(null);
 
   // Queue card updates to batch process them in one animation frame
-  const queueCardUpdate = (card: Card) => {
-    const pendingCardUpdates = pendingCardUpdatesRef.current;
-    pendingCardUpdates.set(card.id, card);
-    if (pendingCardUpdateFrameRef.current !== null) return;
+  const queueCardUpdate = useCallback(
+    (card: Card) => {
+      const pendingCardUpdates = pendingCardUpdatesRef.current;
+      pendingCardUpdates.set(card.id, card);
+      if (pendingCardUpdateFrameRef.current !== null) return;
 
-    pendingCardUpdateFrameRef.current = requestAnimationFrame(() => {
-      pendingCardUpdateFrameRef.current = null;
-      const pendingCards = Array.from(pendingCardUpdates.values());
-      pendingCardUpdates.clear();
-      syncUpdateCards(pendingCards);
-    });
-  };
+      pendingCardUpdateFrameRef.current = requestAnimationFrame(() => {
+        pendingCardUpdateFrameRef.current = null;
+        const pendingCards = Array.from(pendingCardUpdates.values());
+        pendingCardUpdates.clear();
+        syncUpdateCards(pendingCards);
+      });
+    },
+    [syncUpdateCards],
+  );
 
   useEffect(() => {
     if (!socket) return;
@@ -66,7 +69,11 @@ export const useBoardSocket = (boardId: string, userId: string | undefined) => {
     socket.on('card_moved', (payload) => queueCardUpdate(payload));
     socket.on('card_deleted', (payload) => syncDeleteCard(payload));
 
+    const pendingCardUpdates = pendingCardUpdatesRef.current;
+
     return () => {
+      socket.off('member_kicked');
+      socket.off('member_left');
       socket.off('board_updated');
       socket.off('board_deleted');
       socket.off('column_created');
@@ -79,8 +86,19 @@ export const useBoardSocket = (boardId: string, userId: string | undefined) => {
       if (pendingCardUpdateFrameRef.current !== null) {
         cancelAnimationFrame(pendingCardUpdateFrameRef.current);
         pendingCardUpdateFrameRef.current = null;
-        pendingCardUpdatesRef.current.clear();
+        pendingCardUpdates.clear();
       }
     };
-  }, [socket, userId, navigate]);
+  }, [
+    socket,
+    userId,
+    navigate,
+    queueCardUpdate,
+    syncAddCard,
+    syncAddColumn,
+    syncDeleteCard,
+    syncDeleteColumn,
+    syncUpdateBoard,
+    syncUpdateColumn,
+  ]);
 };
